@@ -14,7 +14,7 @@
           <input 
             v-model="searchQuery"
             type="text" 
-            placeholder="搜索..."
+            :placeholder="t('common.search') + '...'"
             class="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
           />
         </div>
@@ -37,7 +37,7 @@
             <div class="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-200 mx-auto mb-3">
               <Search :size="24" />
             </div>
-            <p class="text-sm text-slate-400">未找到匹配项</p>
+            <p class="text-sm text-slate-400">{{ t('common.noMatches') }}</p>
           </div>
         </div>
       </div>
@@ -48,19 +48,19 @@
             @click="selectAll" 
             class="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 uppercase tracking-wider"
           >
-            全选过滤项
+            {{ t('common.selectAllFiltered') }}
           </button>
           <span class="text-slate-200">|</span>
           <button 
             @click="localSelected = []" 
             class="text-[10px] font-bold text-slate-400 hover:text-slate-600 uppercase tracking-wider"
           >
-            清除全部
+            {{ t('common.clearAll') }}
           </button>
         </div>
         <div class="flex gap-3">
-          <button @click="$emit('close')" class="px-6 py-2 text-sm font-bold text-slate-500 hover:text-slate-700 transition-colors">取消</button>
-          <button @click="confirm" class="px-6 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all">确定</button>
+          <button @click="$emit('close')" class="px-6 py-2 text-sm font-bold text-slate-500 hover:text-slate-700 transition-colors">{{ t('common.cancel') }}</button>
+          <button @click="confirm" class="px-6 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all">{{ t('common.confirm') }}</button>
         </div>
       </div>
     </div>
@@ -69,6 +69,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { X, Search } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -80,6 +81,7 @@ const props = defineProps<{
 
 const emit = defineEmits(['close', 'confirm']);
 
+const { t } = useI18n();
 const searchQuery = ref('');
 const localSelected = ref<string[]>([]);
 

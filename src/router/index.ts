@@ -1,4 +1,9 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
+import ReadingList from '../views/ReadingList.vue';
+import ContentManagement from '../views/ContentManagement.vue';
+import CategoryManagement from '../views/CategoryManagement.vue';
+import ArticleEditor from '../views/ArticleEditor.vue';
+import ArticleDetail from '../views/ArticleDetail.vue';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -8,32 +13,32 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/reading-list',
     name: 'reading-list',
-    component: () => import('../App.vue'),
+    component: ReadingList,
   },
   {
     path: '/content-management',
     name: 'info-list',
-    component: () => import('../App.vue'),
+    component: ContentManagement,
   },
   {
     path: '/category-management',
     name: 'category-mgmt',
-    component: () => import('../App.vue'),
+    component: CategoryManagement,
   },
   {
     path: '/article/new',
     name: 'article-editor-new',
-    component: () => import('../App.vue'),
+    component: ArticleEditor,
   },
   {
     path: '/article/edit/:id',
     name: 'article-editor-edit',
-    component: () => import('../App.vue'),
+    component: ArticleEditor,
   },
   {
     path: '/article/:id',
     name: 'article-detail',
-    component: () => import('../App.vue'),
+    component: ArticleDetail,
   }
 ];
 

@@ -35,6 +35,7 @@ db.exec(`
     view_count INTEGER DEFAULT 0,
     reading_time INTEGER DEFAULT 5,
     author TEXT,
+    is_pinned INTEGER DEFAULT 0,
     allow_anonymous INTEGER DEFAULT 1,
     allow_all_registered INTEGER DEFAULT 0,
     allowed_roles TEXT,
@@ -49,6 +50,17 @@ db.exec(`
     content TEXT NOT NULL,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (article_id) REFERENCES articles (id)
+  );
+
+  CREATE TABLE IF NOT EXISTS roles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE
+  );
+
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    display_name TEXT
   );
 `);
 
@@ -65,8 +77,37 @@ try {
 try {
   db.prepare("ALTER TABLE articles ADD COLUMN allowed_users TEXT").run();
 } catch (e) {}
+try {
+  db.prepare("ALTER TABLE articles ADD COLUMN is_pinned INTEGER DEFAULT 0").run();
+} catch (e) {}
 
 // Seed data if empty
+const roleCount = db.prepare("SELECT COUNT(*) as count FROM roles").get() as { count: number };
+if (roleCount.count === 0) {
+  const roles = ["管理员", "编辑", "普通员工", "人力资源", "技术委员会", "财务部", "市场部"];
+  const insertRole = db.prepare("INSERT INTO roles (name) VALUES (?)");
+  for (const role of roles) {
+    insertRole.run(role);
+  }
+}
+
+const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
+if (userCount.count === 0) {
+  const users = [
+    ["admin", "系统管理员"],
+    ["sarah_j", "Sarah J."],
+    ["hr_admin", "HR Admin"],
+    ["zhang_g", "张工"],
+    ["finance_user", "财务专员"],
+    ["marketing_user", "市场专员"],
+    ["wang_x", "小王"]
+  ];
+  const insertUser = db.prepare("INSERT INTO users (username, display_name) VALUES (?, ?)");
+  for (const user of users) {
+    insertUser.run(...user);
+  }
+}
+
 const categoryCount = db.prepare("SELECT COUNT(*) as count FROM categories").get() as { count: number };
 if (categoryCount.count === 0) {
   db.prepare("INSERT INTO categories (name, description, icon) VALUES (?, ?, ?)").run("公司新闻", "公司最新的动态和公告", "newspaper");
@@ -143,7 +184,7 @@ async function startServer() {
       SELECT a.*, c.name as category_name 
       FROM articles a 
       LEFT JOIN categories c ON a.category_id = c.id
-      ORDER BY a.publish_date DESC
+      ORDER BY a.is_pinned DESC, a.publish_date DESC
     `).all();
     res.json(articles);
   });
@@ -173,6 +214,24 @@ async function startServer() {
     res.json({ success: true });
   });
 
+  app.patch("/api/articles/:id", (req, res) => {
+    const { id } = req.params;
+    const updates = req.body;
+    const fields = Object.keys(updates);
+    if (fields.length === 0) return res.json({ success: true });
+
+    const setClause = fields.map(field => `${field} = ?`).join(", ");
+    const values = fields.map(field => {
+      if (field === 'allow_anonymous' || field === 'allow_all_registered' || field === 'is_pinned') {
+        return updates[field] ? 1 : 0;
+      }
+      return updates[field];
+    });
+    
+    db.prepare(`UPDATE articles SET ${setClause} WHERE id = ?`).run(...values, id);
+    res.json({ success: true });
+  });
+
   app.delete("/api/articles/:id", (req, res) => {
     const { id } = req.params;
     db.prepare("DELETE FROM articles WHERE id = ?").run(id);
@@ -192,6 +251,22 @@ async function startServer() {
       VALUES (?, ?, ?)
     `).run(id, author, content);
     res.json({ id: result.lastInsertRowid });
+  });
+
+  app.post("/api/articles/:id/view", (req, res) => {
+    const { id } = req.params;
+    db.prepare("UPDATE articles SET view_count = view_count + 1 WHERE id = ?").run(id);
+    res.json({ success: true });
+  });
+
+  app.get("/api/roles", (req, res) => {
+    const roles = db.prepare("SELECT * FROM roles").all();
+    res.json(roles);
+  });
+
+  app.get("/api/users", (req, res) => {
+    const users = db.prepare("SELECT * FROM users").all();
+    res.json(users);
   });
 
   // Vite middleware for development

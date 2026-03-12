@@ -26,6 +26,7 @@ export interface Article {
   allow_all_registered: boolean;
   allowed_roles?: string;
   allowed_users?: string;
+  is_pinned?: number;
 }
 
 export interface Comment {

@@ -14,8 +14,8 @@
         <!-- Header -->
         <div class="p-8 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
           <div>
-            <h2 class="text-2xl font-black text-slate-900 tracking-tight">选择封面图</h2>
-            <p class="text-sm text-slate-400 font-medium mt-1">上传图片或从图库中选择</p>
+            <h2 class="text-2xl font-black text-slate-900 tracking-tight">{{ t('common.selectCover') }}</h2>
+            <p class="text-sm text-slate-400 font-medium mt-1">{{ t('common.uploadOrSelect') }}</p>
           </div>
           <button @click="$emit('close')" class="p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-colors">
             <X :size="24" />
@@ -29,7 +29,7 @@
             <input 
               v-model="searchQuery"
               type="text" 
-              placeholder="搜索图库内容..."
+              :placeholder="t('common.searchGallery')"
               class="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
             />
           </div>
@@ -39,7 +39,7 @@
               class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all"
             >
               <Upload :size="16" />
-              本地上传
+              {{ t('common.localUpload') }}
             </button>
             <input 
               ref="fileInput"
@@ -76,7 +76,7 @@
           </div>
           <div v-else class="flex flex-col items-center justify-center py-20 text-slate-300">
             <Search :size="48" class="mb-4 opacity-20" />
-            <p class="font-bold">未找到匹配的图片</p>
+            <p class="font-bold">{{ t('common.noMatchingImages') }}</p>
           </div>
         </div>
 
@@ -86,17 +86,17 @@
             <div v-if="selectedUrl" class="w-16 h-10 rounded-lg overflow-hidden border border-slate-200 shadow-sm">
               <img :src="selectedUrl" class="w-full h-full object-cover" referrerPolicy="no-referrer" />
             </div>
-            <p v-if="selectedUrl" class="text-xs font-bold text-slate-500">已选择图片</p>
-            <p v-else class="text-xs font-bold text-slate-400">请选择一张图片作为封面</p>
+            <p v-if="selectedUrl" class="text-xs font-bold text-slate-500">{{ t('common.imageSelected') }}</p>
+            <p v-else class="text-xs font-bold text-slate-400">{{ t('common.pleaseSelectImage') }}</p>
           </div>
           <div class="flex gap-3">
-            <button @click="$emit('close')" class="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-700 transition-colors">取消</button>
+            <button @click="$emit('close')" class="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-700 transition-colors">{{ t('common.cancel') }}</button>
             <button 
               @click="confirm" 
               :disabled="!selectedUrl"
               class="px-8 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              确认选择
+              {{ t('common.confirmSelection') }}
             </button>
           </div>
         </div>
@@ -107,6 +107,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { X, Search, Upload, Check } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -116,6 +117,7 @@ const props = defineProps<{
 
 const emit = defineEmits(['close', 'confirm']);
 
+const { t } = useI18n();
 const searchQuery = ref('');
 const selectedUrl = ref('');
 const fileInput = ref<HTMLInputElement | null>(null);
