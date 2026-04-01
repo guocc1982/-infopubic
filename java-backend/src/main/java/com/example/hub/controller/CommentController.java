@@ -1,5 +1,6 @@
 package com.example.hub.controller;
 
+import com.example.hub.config.TenantContext;
 import com.example.hub.entity.Comment;
 import com.example.hub.repository.CommentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,12 +18,13 @@ public class CommentController {
 
     @GetMapping
     public List<Comment> getCommentsByArticleId(@PathVariable Long articleId) {
-        return commentRepository.findAllByArticleIdOrderByCreatedAtDesc(articleId);
+        return commentRepository.findAllByArticleIdAndTenantIdOrderByCreatedAtDesc(articleId, TenantContext.getCurrentTenant());
     }
 
     @PostMapping
     public Comment createComment(@PathVariable Long articleId, @RequestBody Comment comment) {
         comment.setArticleId(articleId);
+        comment.setTenantId(TenantContext.getCurrentTenant());
         return commentRepository.save(comment);
     }
 }

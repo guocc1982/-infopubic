@@ -55,4 +55,7 @@ public class Article {
 
     @Column(name = "allowed_users")
     private String allowedUsers;
+
+    @Column(name = "tenant_id")
+    private String tenantId = "default";
 }

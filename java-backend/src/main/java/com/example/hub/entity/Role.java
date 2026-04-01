@@ -13,4 +13,7 @@ public class Role {
 
     @Column(nullable = false, unique = true)
     private String name;
+
+    @Column(name = "tenant_id")
+    private String tenantId = "default";
 }

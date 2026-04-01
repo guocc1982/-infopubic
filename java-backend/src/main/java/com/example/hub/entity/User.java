@@ -16,4 +16,7 @@ public class User {
 
     @Column(name = "display_name")
     private String displayName;
+
+    @Column(name = "tenant_id")
+    private String tenantId = "default";
 }

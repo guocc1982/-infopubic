@@ -1,5 +1,6 @@
 package com.example.hub.controller;
 
+import com.example.hub.config.TenantContext;
 import com.example.hub.entity.Role;
 import com.example.hub.repository.RoleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,6 @@ public class RoleController {
 
     @GetMapping
     public List<Role> getAllRoles() {
-        return roleRepository.findAll();
+        return roleRepository.findAllByTenantId(TenantContext.getCurrentTenant());
     }
 }

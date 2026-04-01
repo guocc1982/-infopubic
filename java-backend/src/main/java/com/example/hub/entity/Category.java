@@ -26,4 +26,7 @@ public class Category {
     private Integer isPublished = 1;
 
     private String icon;
+
+    @Column(name = "tenant_id")
+    private String tenantId = "default";
 }

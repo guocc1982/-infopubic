@@ -1,5 +1,6 @@
 package com.example.hub.controller;
 
+import com.example.hub.config.TenantContext;
 import com.example.hub.entity.Article;
 import com.example.hub.repository.ArticleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,23 +19,24 @@ public class ArticleController {
 
     @GetMapping
     public List<Article> getAllArticles() {
-        return articleRepository.findAllByOrderByIsPinnedDescPublishDateDesc();
+        return articleRepository.findAllByTenantIdOrderByIsPinnedDescPublishDateDesc(TenantContext.getCurrentTenant());
     }
 
     @GetMapping("/{id}")
     public Article getArticleById(@PathVariable Long id) {
-        return articleRepository.findById(id)
+        return articleRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenant())
                 .orElseThrow(() -> new RuntimeException("Article not found with id: " + id));
     }
 
     @PostMapping
     public Article createArticle(@RequestBody Article article) {
+        article.setTenantId(TenantContext.getCurrentTenant());
         return articleRepository.save(article);
     }
 
     @PutMapping("/{id}")
     public Article updateArticle(@PathVariable Long id, @RequestBody Article articleDetails) {
-        Article article = articleRepository.findById(id)
+        Article article = articleRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenant())
                 .orElseThrow(() -> new RuntimeException("Article not found with id: " + id));
         
         article.setTitle(articleDetails.getTitle());
@@ -57,7 +59,7 @@ public class ArticleController {
 
     @PatchMapping("/{id}")
     public Article patchArticle(@PathVariable Long id, @RequestBody Map<String, Object> updates) {
-        Article article = articleRepository.findById(id)
+        Article article = articleRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenant())
                 .orElseThrow(() -> new RuntimeException("Article not found with id: " + id));
         
         updates.forEach((key, value) -> {
@@ -84,12 +86,14 @@ public class ArticleController {
 
     @DeleteMapping("/{id}")
     public void deleteArticle(@PathVariable Long id) {
-        articleRepository.deleteById(id);
+        Article article = articleRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenant())
+                .orElseThrow(() -> new RuntimeException("Article not found with id: " + id));
+        articleRepository.delete(article);
     }
 
     @PostMapping("/{id}/view")
     public void incrementViewCount(@PathVariable Long id) {
-        Article article = articleRepository.findById(id)
+        Article article = articleRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenant())
                 .orElseThrow(() -> new RuntimeException("Article not found with id: " + id));
         article.setViewCount(article.getViewCount() + 1);
         articleRepository.save(article);

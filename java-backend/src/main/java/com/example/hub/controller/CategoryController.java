@@ -1,5 +1,6 @@
 package com.example.hub.controller;
 
+import com.example.hub.config.TenantContext;
 import com.example.hub.entity.Category;
 import com.example.hub.repository.CategoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,17 +18,18 @@ public class CategoryController {
 
     @GetMapping
     public List<Category> getAllCategories() {
-        return categoryRepository.findAllByOrderByDisplayOrderAsc();
+        return categoryRepository.findAllByTenantIdOrderByDisplayOrderAsc(TenantContext.getCurrentTenant());
     }
 
     @PostMapping
     public Category createCategory(@RequestBody Category category) {
+        category.setTenantId(TenantContext.getCurrentTenant());
         return categoryRepository.save(category);
     }
 
     @PutMapping("/{id}")
     public Category updateCategory(@PathVariable Long id, @RequestBody Category categoryDetails) {
-        Category category = categoryRepository.findById(id)
+        Category category = categoryRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenant())
                 .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
         
         category.setName(categoryDetails.getName());
@@ -42,6 +44,8 @@ public class CategoryController {
 
     @DeleteMapping("/{id}")
     public void deleteCategory(@PathVariable Long id) {
-        categoryRepository.deleteById(id);
+        Category category = categoryRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenant())
+                .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
+        categoryRepository.delete(category);
     }
 }

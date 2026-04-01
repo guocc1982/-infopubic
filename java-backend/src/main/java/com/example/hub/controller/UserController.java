@@ -1,5 +1,6 @@
 package com.example.hub.controller;
 
+import com.example.hub.config.TenantContext;
 import com.example.hub.entity.User;
 import com.example.hub.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,6 @@ public class UserController {
 
     @GetMapping
     public List<User> getAllUsers() {
-        return userRepository.findAll();
+        return userRepository.findAllByTenantId(TenantContext.getCurrentTenant());
     }
 }

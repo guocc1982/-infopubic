@@ -23,4 +23,7 @@ public class Comment {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(name = "tenant_id")
+    private String tenantId = "default";
 }
