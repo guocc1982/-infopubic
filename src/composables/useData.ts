@@ -16,9 +16,15 @@ export function useData() {
         fetch('/api/categories'),
         fetch('/api/articles')
       ]);
-      categories.value = await catsRes.json();
+      categories.value = (await catsRes.json()).map((cat: any) => ({
+        ...cat,
+        id: Number(cat.id),
+        parent_id: cat.parent_id ? Number(cat.parent_id) : null
+      }));
       articles.value = (await artsRes.json()).map((art: any) => ({
         ...art,
+        id: Number(art.id),
+        category_id: Number(art.category_id),
         allow_anonymous: !!art.allow_anonymous,
         allow_all_registered: !!art.allow_all_registered
       }));

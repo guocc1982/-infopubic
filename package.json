@@ -17,6 +17,7 @@
     "@vitejs/plugin-vue": "^6.0.4",
     "@vueup/vue-quill": "^1.2.0",
     "better-sqlite3": "^12.4.1",
+    "dmdb": "^1.0.48286",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
     "lucide-vue-next": "^0.577.0",

@@ -55,13 +55,12 @@ onMounted(fetchData);
           {{ t('common.all') }}
         </button>
         <button 
-          v-for="cat in categories"
+          v-for="cat in categories.filter(c => !c.parent_id)"
           :key="cat.id"
           @click="selectedCategoryId = cat.id!"
           :class="[
             'px-4 py-2 rounded-full text-sm font-medium transition-all',
-            selectedCategoryId === cat.id ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300',
-            cat.parent_id ? 'opacity-80 scale-95' : ''
+            selectedCategoryId === cat.id ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300'
           ]"
         >
           {{ cat.name }}

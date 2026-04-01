@@ -30,7 +30,14 @@ const fetchArticle = async (id: number) => {
   try {
     const res = await fetch(`/api/articles/${id}`);
     if (res.ok) {
-      viewingArticle.value = await res.json();
+      const art = await res.json();
+      viewingArticle.value = {
+        ...art,
+        id: Number(art.id),
+        category_id: Number(art.category_id),
+        allow_anonymous: !!art.allow_anonymous,
+        allow_all_registered: !!art.allow_all_registered
+      };
       // Increment view count
       fetch(`/api/articles/${id}/view`, { method: 'POST' });
       fetchComments(id);
@@ -123,7 +130,7 @@ onMounted(async () => {
           <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
             <User :size="16" />
           </div>
-          <span class="font-medium text-slate-700">{{ viewingArticle.author || t('article.admin') }}</span>
+          <span class="font-medium text-slate-700">{{ viewingArticle.author || t('common.systemAdmin') }}</span>
         </div>
         <span class="flex items-center gap-1.5"><Clock :size="16" /> {{ viewingArticle.publish_date }}</span>
         <span class="flex items-center gap-1.5"><Eye :size="16" /> {{ viewingArticle.view_count }} {{ t('common.timesRead') }}</span>
