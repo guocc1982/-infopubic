@@ -13,7 +13,7 @@ import { useData } from '../composables/useData';
 
 const router = useRouter();
 const { t } = useI18n();
-const { categories, articles, isLoading, fetchData, getCategoryName } = useData();
+const { categories, articles, isLoading, fetchData, getCategoryName, getSubCategoryIds } = useData();
 
 const searchQuery = ref('');
 const selectedCategoryId = ref<number | null>(null);
@@ -22,7 +22,12 @@ const filteredArticles = computed(() => {
   return articles.value.filter(art => {
     const matchesSearch = art.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
                          art.summary.toLowerCase().includes(searchQuery.value.toLowerCase());
-    const matchesCategory = !selectedCategoryId.value || art.category_id === selectedCategoryId.value;
+    
+    let matchesCategory = true;
+    if (selectedCategoryId.value) {
+      const subIds = getSubCategoryIds(selectedCategoryId.value);
+      matchesCategory = art.category_id === selectedCategoryId.value || subIds.includes(art.category_id);
+    }
     
     // Reading list only shows published articles
     return matchesSearch && matchesCategory && art.status === 'published';
@@ -50,12 +55,13 @@ onMounted(fetchData);
           {{ t('common.all') }}
         </button>
         <button 
-          v-for="cat in categories.filter(c => !c.parent_id)"
+          v-for="cat in categories"
           :key="cat.id"
           @click="selectedCategoryId = cat.id!"
           :class="[
             'px-4 py-2 rounded-full text-sm font-medium transition-all',
-            selectedCategoryId === cat.id ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300'
+            selectedCategoryId === cat.id ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300',
+            cat.parent_id ? 'opacity-80 scale-95' : ''
           ]"
         >
           {{ cat.name }}
@@ -94,7 +100,7 @@ onMounted(fetchData);
           />
           <div class="absolute top-4 left-4">
             <span class="px-3 py-1 bg-white/90 backdrop-blur-sm text-indigo-600 text-xs font-bold rounded-full uppercase tracking-wider">
-              {{ getCategoryName(article.category_id) }}
+              {{ article.category_name || getCategoryName(article.category_id) }}
             </span>
           </div>
         </div>

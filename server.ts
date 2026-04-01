@@ -190,7 +190,12 @@ async function startServer() {
   });
 
   app.get("/api/articles/:id", (req, res) => {
-    const article = db.prepare("SELECT * FROM articles WHERE id = ?").get(req.params.id);
+    const article = db.prepare(`
+      SELECT a.*, c.name as category_name 
+      FROM articles a 
+      LEFT JOIN categories c ON a.category_id = c.id 
+      WHERE a.id = ?
+    `).get(req.params.id);
     res.json(article);
   });
 

@@ -18,7 +18,7 @@ import type { Article, Comment } from '../types';
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
-const { getCategoryName } = useData();
+const { getCategoryName, fetchData } = useData();
 
 const viewingArticle = ref<Article | null>(null);
 const comments = ref<Comment[]>([]);
@@ -81,9 +81,14 @@ const copyLink = async () => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
   const id = parseInt(route.params.id as string);
-  if (id) fetchArticle(id);
+  if (id) {
+    await Promise.all([
+      fetchArticle(id),
+      fetchData()
+    ]);
+  }
 });
 </script>
 
@@ -105,9 +110,9 @@ onMounted(() => {
       <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end p-8">
         <div class="space-y-2">
           <span class="px-3 py-1 bg-indigo-600 text-white text-xs font-bold rounded-full uppercase tracking-wider">
-            {{ getCategoryName(viewingArticle.category_id) }}
+            {{ viewingArticle.category_name || getCategoryName(viewingArticle.category_id) }}
           </span>
-          <h2 class="text-3xl md:text-4xl font-bold text-white leading-tight">{{ viewingArticle.title }}</h2>
+          <h2 class="text-3xl md:text-4xl font-bold text-white leading-tight">{{ viewingArticle.title || t('article.noTitle') }}</h2>
         </div>
       </div>
     </div>

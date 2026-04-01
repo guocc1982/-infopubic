@@ -1,12 +1,15 @@
 import { ref } from 'vue';
 import type { Category, Article } from '../types';
 
-export function useData() {
-  const categories = ref<Category[]>([]);
-  const articles = ref<Article[]>([]);
-  const isLoading = ref(false);
+const categories = ref<Category[]>([]);
+const articles = ref<Article[]>([]);
+const isLoading = ref(false);
+const isInitialized = ref(false);
 
-  const fetchData = async () => {
+export function useData() {
+  const fetchData = async (force = false) => {
+    if (isInitialized.value && !force) return;
+    
     isLoading.value = true;
     try {
       const [catsRes, artsRes] = await Promise.all([
@@ -19,6 +22,7 @@ export function useData() {
         allow_anonymous: !!art.allow_anonymous,
         allow_all_registered: !!art.allow_all_registered
       }));
+      isInitialized.value = true;
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {
@@ -26,15 +30,28 @@ export function useData() {
     }
   };
 
-  const getCategoryName = (id: number) => {
-    return categories.value.find(c => c.id === id)?.name || 'Unknown';
+  const getCategoryName = (id: number | null | undefined) => {
+    if (!id) return '';
+    const cat = categories.value.find(c => c.id === id);
+    return cat ? cat.name : 'Unknown1';
+  };
+
+  const getSubCategoryIds = (parentId: number): number[] => {
+    const subs = categories.value.filter(c => c.parent_id === parentId);
+    let ids = subs.map(c => c.id);
+    subs.forEach(s => {
+      ids = [...ids, ...getSubCategoryIds(s.id)];
+    });
+    return ids;
   };
 
   return {
     categories,
     articles,
     isLoading,
+    isInitialized,
     fetchData,
-    getCategoryName
+    getCategoryName,
+    getSubCategoryIds
   };
 }
