@@ -22,7 +22,7 @@ public class Article {
     @Column(columnDefinition = "TEXT")
     private String summary;
 
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(columnDefinition = "TEXT")
     private String content;
 
     @Column(name = "thumbnail_url")

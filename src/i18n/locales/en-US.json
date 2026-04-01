@@ -74,8 +74,7 @@
     "imageSelected": "Image selected",
     "pleaseSelectImage": "Please select an image as cover",
     "confirmSelection": "Confirm Selection",
-    "noMatchingImages": "No matching images found",
-    "systemAdmin": "System Admin"
+    "noMatchingImages": "No matching images found"
   },
   "article": {
     "title": "Title",
@@ -96,9 +95,6 @@
     "selectRoles": "Select Roles",
     "selectUsers": "Select Users",
     "selectCategory": "Select Category",
-    "noTitle": "No Title",
-    "noContent": "No Content",
-    "admin": "System Admin",
     "wordCount": "Words",
     "estReadingTime": "Est. Reading",
     "minutes": "min",

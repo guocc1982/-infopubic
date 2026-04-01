@@ -39,7 +39,8 @@ const editingArticle = ref<Partial<Article>>({
   allow_anonymous: true,
   allow_all_registered: false,
   allowed_roles: '',
-  allowed_users: ''
+  allowed_users: '',
+  is_pinned: 0
 });
 
 const isPreviewMode = ref(false);

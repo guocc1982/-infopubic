@@ -13,20 +13,23 @@ import { useData } from '../composables/useData';
 
 const router = useRouter();
 const { t } = useI18n();
-const { categories, articles, isLoading, fetchData, getCategoryName, getSubCategoryIds } = useData();
+const { categories, articles, isLoading, fetchData, getCategoryName } = useData();
 
 const searchQuery = ref('');
 const selectedCategoryId = ref<number | null>(null);
 
 const filteredArticles = computed(() => {
   return articles.value.filter(art => {
-    const matchesSearch = art.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-                         art.summary.toLowerCase().includes(searchQuery.value.toLowerCase());
+    const title = art.title || '';
+    const summary = art.summary || '';
+    const searchQueryLower = searchQuery.value.toLowerCase();
+    
+    const matchesSearch = title.toLowerCase().includes(searchQueryLower) ||
+                         summary.toLowerCase().includes(searchQueryLower);
     
     let matchesCategory = true;
     if (selectedCategoryId.value) {
-      const subIds = getSubCategoryIds(selectedCategoryId.value);
-      matchesCategory = art.category_id === selectedCategoryId.value || subIds.includes(art.category_id);
+      matchesCategory = art.category_id === selectedCategoryId.value;
     }
     
     // Reading list only shows published articles
@@ -38,7 +41,7 @@ const navigateToDetail = (id: number) => {
   router.push(`/article/${id}`);
 };
 
-onMounted(fetchData);
+onMounted(() => fetchData(true));
 </script>
 
 <template>
@@ -55,7 +58,7 @@ onMounted(fetchData);
           {{ t('common.all') }}
         </button>
         <button 
-          v-for="cat in categories.filter(c => !c.parent_id)"
+          v-for="cat in categories"
           :key="cat.id"
           @click="selectedCategoryId = cat.id!"
           :class="[

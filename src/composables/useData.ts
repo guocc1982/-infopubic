@@ -8,26 +8,30 @@ const isInitialized = ref(false);
 
 export function useData() {
   const fetchData = async (force = false) => {
-    if (isInitialized.value && !force) return;
+    if (isInitialized.value && !force && articles.value.length > 0) return;
     
     isLoading.value = true;
     try {
+      console.log('Fetching data from API...', { force });
       const [catsRes, artsRes] = await Promise.all([
         fetch('/api/categories'),
         fetch('/api/articles')
       ]);
-      categories.value = (await catsRes.json()).map((cat: any) => ({
-        ...cat,
-        id: Number(cat.id),
-        parent_id: cat.parent_id ? Number(cat.parent_id) : null
-      }));
-      articles.value = (await artsRes.json()).map((art: any) => ({
-        ...art,
-        id: Number(art.id),
-        category_id: Number(art.category_id),
-        allow_anonymous: !!art.allow_anonymous,
-        allow_all_registered: !!art.allow_all_registered
-      }));
+      
+      if (!catsRes.ok || !artsRes.ok) {
+        throw new Error(`API error: ${catsRes.status} ${artsRes.status}`);
+      }
+
+      const catsData = await catsRes.json();
+      const artsData = await artsRes.json();
+      
+      console.log('Data fetched successfully:', { 
+        categoriesCount: catsData.length, 
+        articlesCount: artsData.length 
+      });
+      
+      categories.value = catsData;
+      articles.value = artsData;
       isInitialized.value = true;
     } catch (error) {
       console.error('Failed to fetch data:', error);
@@ -39,16 +43,7 @@ export function useData() {
   const getCategoryName = (id: number | null | undefined) => {
     if (!id) return '';
     const cat = categories.value.find(c => c.id === id);
-    return cat ? cat.name : 'Unknown1';
-  };
-
-  const getSubCategoryIds = (parentId: number): number[] => {
-    const subs = categories.value.filter(c => c.parent_id === parentId);
-    let ids = subs.map(c => c.id);
-    subs.forEach(s => {
-      ids = [...ids, ...getSubCategoryIds(s.id)];
-    });
-    return ids;
+    return cat ? cat.name : '';
   };
 
   return {
@@ -57,7 +52,6 @@ export function useData() {
     isLoading,
     isInitialized,
     fetchData,
-    getCategoryName,
-    getSubCategoryIds
+    getCategoryName
   };
 }

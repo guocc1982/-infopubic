@@ -69,8 +69,12 @@ const resetFilters = () => {
 
 const filteredArticles = computed(() => {
   return articles.value.filter(art => {
-    const matchesSearch = art.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-                         art.summary.toLowerCase().includes(searchQuery.value.toLowerCase());
+    const title = art.title || '';
+    const summary = art.summary || '';
+    const searchQueryLower = searchQuery.value.toLowerCase();
+    
+    const matchesSearch = title.toLowerCase().includes(searchQueryLower) ||
+                         summary.toLowerCase().includes(searchQueryLower);
     const matchesCategory = !selectedCategoryId.value || art.category_id === selectedCategoryId.value;
     const matchesStatus = selectedStatus.value === 'all' || art.status === selectedStatus.value;
     
@@ -279,7 +283,7 @@ const saveArticleStatus = async (id: number, status: Article['status']) => {
 };
 
 onMounted(() => {
-  fetchData();
+  fetchData(true);
   window.addEventListener('click', (e) => {
     if (!(e.target as HTMLElement).closest('.more-actions-container')) {
       activeDropdownId.value = null;
