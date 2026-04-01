@@ -18,7 +18,7 @@ import type { Article, Comment } from '../types';
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
-const { getCategoryName, fetchData } = useData();
+const { getCategoryName, fetchData, tenantId } = useData();
 
 const viewingArticle = ref<Article | null>(null);
 const comments = ref<Comment[]>([]);
@@ -28,11 +28,16 @@ const isLoading = ref(true);
 const fetchArticle = async (id: number) => {
   isLoading.value = true;
   try {
-    const res = await fetch(`/api/articles/${id}`);
+    const res = await fetch(`/api/articles/${id}`, {
+      headers: { 'X-Tenant-ID': tenantId.value }
+    });
     if (res.ok) {
       viewingArticle.value = await res.json();
       // Increment view count
-      fetch(`/api/articles/${id}/view`, { method: 'POST' });
+      fetch(`/api/articles/${id}/view`, { 
+        method: 'POST',
+        headers: { 'X-Tenant-ID': tenantId.value }
+      });
       fetchComments(id);
     }
   } catch (error) {
@@ -44,7 +49,9 @@ const fetchArticle = async (id: number) => {
 
 const fetchComments = async (articleId: number) => {
   try {
-    const res = await fetch(`/api/articles/${articleId}/comments`);
+    const res = await fetch(`/api/articles/${articleId}/comments`, {
+      headers: { 'X-Tenant-ID': tenantId.value }
+    });
     if (res.ok) {
       comments.value = await res.json();
     }
@@ -59,7 +66,10 @@ const submitComment = async () => {
   try {
     const res = await fetch(`/api/articles/${viewingArticle.value.id}/comments`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Tenant-ID': tenantId.value
+      },
       body: JSON.stringify(newComment.value)
     });
     

@@ -5,17 +5,28 @@ const categories = ref<Category[]>([]);
 const articles = ref<Article[]>([]);
 const isLoading = ref(false);
 const isInitialized = ref(false);
+const tenantId = ref(localStorage.getItem('tenantId') || 'default');
 
 export function useData() {
+  const setTenantId = (id: string) => {
+    tenantId.value = id;
+    localStorage.setItem('tenantId', id);
+    fetchData(true);
+  };
+
   const fetchData = async (force = false) => {
     if (isInitialized.value && !force && articles.value.length > 0) return;
     
     isLoading.value = true;
     try {
-      console.log('Fetching data from API...', { force });
+      console.log('Fetching data from API for tenant:', tenantId.value, { force });
+      const headers = {
+        'X-Tenant-ID': tenantId.value
+      };
+
       const [catsRes, artsRes] = await Promise.all([
-        fetch('/api/categories'),
-        fetch('/api/articles')
+        fetch('/api/categories', { headers }),
+        fetch('/api/articles', { headers })
       ]);
       
       if (!catsRes.ok || !artsRes.ok) {
@@ -51,6 +62,8 @@ export function useData() {
     articles,
     isLoading,
     isInitialized,
+    tenantId,
+    setTenantId,
     fetchData,
     getCategoryName
   };

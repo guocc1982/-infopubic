@@ -10,11 +10,19 @@ const __dirname = path.dirname(__filename);
 const db = new Database("hub.db");
 db.pragma('foreign_keys = ON');
 
+// Tenant Middleware
+const tenantMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const tenantId = req.header('X-Tenant-ID') || 'default';
+  (req as any).tenantId = tenantId;
+  next();
+};
+
 // Initialize Database
 function initDb() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS categories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
       name TEXT NOT NULL,
       parent_id INTEGER,
       description TEXT,
@@ -27,6 +35,7 @@ function initDb() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS articles (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
       title TEXT NOT NULL,
       subtitle TEXT,
       category_id INTEGER,
@@ -53,31 +62,39 @@ function initDb() {
   try { db.exec("ALTER TABLE articles ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP"); } catch(e) {}
   try { db.exec("ALTER TABLE articles ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP"); } catch(e) {}
   try { db.exec("ALTER TABLE articles ADD COLUMN is_pinned INTEGER DEFAULT 0"); } catch(e) {}
+  try { db.exec("ALTER TABLE articles ADD COLUMN tenant_id TEXT NOT NULL DEFAULT 'default'"); } catch(e) {}
+  try { db.exec("ALTER TABLE categories ADD COLUMN tenant_id TEXT NOT NULL DEFAULT 'default'"); } catch(e) {}
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS comments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
       article_id INTEGER NOT NULL,
       author TEXT NOT NULL,
       content TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  try { db.exec("ALTER TABLE comments ADD COLUMN tenant_id TEXT NOT NULL DEFAULT 'default'"); } catch(e) {}
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS roles (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL UNIQUE
+      tenant_id TEXT NOT NULL DEFAULT 'default',
+      name TEXT NOT NULL
     )
   `);
+  try { db.exec("ALTER TABLE roles ADD COLUMN tenant_id TEXT NOT NULL DEFAULT 'default'"); } catch(e) {}
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT NOT NULL UNIQUE,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
+      username TEXT NOT NULL,
       display_name TEXT
     )
   `);
+  try { db.exec("ALTER TABLE users ADD COLUMN tenant_id TEXT NOT NULL DEFAULT 'default'"); } catch(e) {}
 
   // Add missing columns if they don't exist
   const tableInfo = db.prepare("PRAGMA table_info(articles)").all() as any[];
@@ -167,19 +184,20 @@ initDb();
 
 const app = express();
 app.use(express.json());
+app.use(tenantMiddleware);
 
 // API Routes
 app.get("/api/categories", (req, res) => {
-  const categories = db.prepare("SELECT * FROM categories ORDER BY display_order ASC").all();
+  const categories = db.prepare("SELECT * FROM categories WHERE tenant_id = ? ORDER BY display_order ASC").all((req as any).tenantId);
   res.json(categories);
 });
 
 app.post("/api/categories", (req, res) => {
   const { name, parent_id, description, display_order, is_published, icon } = req.body;
   const result = db.prepare(`
-    INSERT INTO categories (name, parent_id, description, display_order, is_published, icon)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(name, parent_id, description, display_order, is_published, icon);
+    INSERT INTO categories (name, parent_id, description, display_order, is_published, icon, tenant_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(name, parent_id, description, display_order, is_published, icon, (req as any).tenantId);
   res.json({ id: result.lastInsertRowid });
 });
 
@@ -189,14 +207,14 @@ app.put("/api/categories/:id", (req, res) => {
   db.prepare(`
     UPDATE categories 
     SET name = ?, parent_id = ?, description = ?, display_order = ?, is_published = ?, icon = ?
-    WHERE id = ?
-  `).run(name, parent_id, description, display_order, is_published, icon, id);
+    WHERE id = ? AND tenant_id = ?
+  `).run(name, parent_id, description, display_order, is_published, icon, id, (req as any).tenantId);
   res.json({ success: true });
 });
 
 app.delete("/api/categories/:id", (req, res) => {
   const { id } = req.params;
-  db.prepare("DELETE FROM categories WHERE id = ?").run(id);
+  db.prepare("DELETE FROM categories WHERE id = ? AND tenant_id = ?").run(id, (req as any).tenantId);
   res.json({ success: true });
 });
 
@@ -205,8 +223,9 @@ app.get("/api/articles", (req, res) => {
     SELECT a.*, c.name as category_name 
     FROM articles a 
     LEFT JOIN categories c ON a.category_id = c.id
+    WHERE a.tenant_id = ?
     ORDER BY a.is_pinned DESC, a.publish_date DESC
-  `).all();
+  `).all((req as any).tenantId);
   res.json(articles);
 });
 
@@ -215,19 +234,19 @@ app.get("/api/articles/:id", (req, res) => {
     SELECT a.*, c.name as category_name 
     FROM articles a 
     LEFT JOIN categories c ON a.category_id = c.id 
-    WHERE a.id = ?
-  `).get(req.params.id);
+    WHERE a.id = ? AND a.tenant_id = ?
+  `).get(req.params.id, (req as any).tenantId);
   res.json(article);
 });
 
 app.post("/api/articles", (req, res) => {
   const { title, subtitle, category_id, summary, content, thumbnail_url, status, publish_date, reading_time, allow_anonymous, allow_all_registered, allowed_roles, allowed_users, is_pinned } = req.body;
-  console.log('Creating new article:', { title, status });
+  console.log('Creating new article:', { title, status, tenantId: (req as any).tenantId });
   try {
     const result = db.prepare(`
-      INSERT INTO articles (title, subtitle, category_id, summary, content, thumbnail_url, status, publish_date, reading_time, allow_anonymous, allow_all_registered, allowed_roles, allowed_users, is_pinned)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(title, subtitle, category_id, summary, content, thumbnail_url, status, publish_date, reading_time, allow_anonymous ? 1 : 0, allow_all_registered ? 1 : 0, allowed_roles, allowed_users, is_pinned ? 1 : 0);
+      INSERT INTO articles (title, subtitle, category_id, summary, content, thumbnail_url, status, publish_date, reading_time, allow_anonymous, allow_all_registered, allowed_roles, allowed_users, is_pinned, tenant_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(title, subtitle, category_id, summary, content, thumbnail_url, status, publish_date, reading_time, allow_anonymous ? 1 : 0, allow_all_registered ? 1 : 0, allowed_roles, allowed_users, is_pinned ? 1 : 0, (req as any).tenantId);
     console.log('Article created successfully, ID:', result.lastInsertRowid);
     res.json({ id: result.lastInsertRowid });
   } catch (error) {
@@ -239,13 +258,13 @@ app.post("/api/articles", (req, res) => {
 app.put("/api/articles/:id", (req, res) => {
   const { id } = req.params;
   const { title, subtitle, category_id, summary, content, thumbnail_url, status, publish_date, reading_time, allow_anonymous, allow_all_registered, allowed_roles, allowed_users, is_pinned } = req.body;
-  console.log('Updating article:', { id, title, status });
+  console.log('Updating article:', { id, title, status, tenantId: (req as any).tenantId });
   try {
     db.prepare(`
       UPDATE articles 
       SET title = ?, subtitle = ?, category_id = ?, summary = ?, content = ?, thumbnail_url = ?, status = ?, publish_date = ?, reading_time = ?, allow_anonymous = ?, allow_all_registered = ?, allowed_roles = ?, allowed_users = ?, is_pinned = ?
-      WHERE id = ?
-    `).run(title, subtitle, category_id, summary, content, thumbnail_url, status, publish_date, reading_time, allow_anonymous ? 1 : 0, allow_all_registered ? 1 : 0, allowed_roles, allowed_users, is_pinned ? 1 : 0, id);
+      WHERE id = ? AND tenant_id = ?
+    `).run(title, subtitle, category_id, summary, content, thumbnail_url, status, publish_date, reading_time, allow_anonymous ? 1 : 0, allow_all_registered ? 1 : 0, allowed_roles, allowed_users, is_pinned ? 1 : 0, id, (req as any).tenantId);
     console.log('Article updated successfully, ID:', id);
     res.json({ success: true });
   } catch (error) {
@@ -268,18 +287,18 @@ app.patch("/api/articles/:id", (req, res) => {
     return updates[field];
   });
   
-  db.prepare(`UPDATE articles SET ${setClause} WHERE id = ?`).run(...values, id);
+  db.prepare(`UPDATE articles SET ${setClause} WHERE id = ? AND tenant_id = ?`).run(...values, id, (req as any).tenantId);
   res.json({ success: true });
 });
 
 app.delete("/api/articles/:id", (req, res) => {
   const { id } = req.params;
-  db.prepare("DELETE FROM articles WHERE id = ?").run(id);
+  db.prepare("DELETE FROM articles WHERE id = ? AND tenant_id = ?").run(id, (req as any).tenantId);
   res.json({ success: true });
 });
 
 app.get("/api/articles/:id/comments", (req, res) => {
-  const comments = db.prepare("SELECT * FROM comments WHERE article_id = ? ORDER BY created_at DESC").all(req.params.id);
+  const comments = db.prepare("SELECT * FROM comments WHERE article_id = ? AND tenant_id = ? ORDER BY created_at DESC").all(req.params.id, (req as any).tenantId);
   res.json(comments);
 });
 
@@ -287,25 +306,25 @@ app.post("/api/articles/:id/comments", (req, res) => {
   const { id } = req.params;
   const { author, content } = req.body;
   const result = db.prepare(`
-    INSERT INTO comments (article_id, author, content)
-    VALUES (?, ?, ?)
-  `).run(id, author, content);
+    INSERT INTO comments (article_id, author, content, tenant_id)
+    VALUES (?, ?, ?, ?)
+  `).run(id, author, content, (req as any).tenantId);
   res.json({ id: result.lastInsertRowid });
 });
 
 app.post("/api/articles/:id/view", (req, res) => {
   const { id } = req.params;
-  db.prepare("UPDATE articles SET view_count = view_count + 1 WHERE id = ?").run(id);
+  db.prepare("UPDATE articles SET view_count = view_count + 1 WHERE id = ? AND tenant_id = ?").run(id, (req as any).tenantId);
   res.json({ success: true });
 });
 
 app.get("/api/roles", (req, res) => {
-  const roles = db.prepare("SELECT * FROM roles").all();
+  const roles = db.prepare("SELECT * FROM roles WHERE tenant_id = ?").all((req as any).tenantId);
   res.json(roles);
 });
 
 app.get("/api/users", (req, res) => {
-  const users = db.prepare("SELECT * FROM users").all();
+  const users = db.prepare("SELECT * FROM users WHERE tenant_id = ?").all((req as any).tenantId);
   res.json(users);
 });
 

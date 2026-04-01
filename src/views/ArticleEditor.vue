@@ -23,7 +23,7 @@ import type { Article } from '../types';
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
-const { categories, fetchData } = useData();
+const { categories, fetchData, tenantId } = useData();
 
 const editingArticle = ref<Partial<Article>>({
   title: '',
@@ -152,7 +152,10 @@ const saveArticle = async (statusOverride?: Article['status']) => {
   try {
     const res = await fetch(url, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Tenant-ID': tenantId.value
+      },
       body: JSON.stringify(article)
     });
     if (res.ok) {
@@ -165,7 +168,9 @@ const saveArticle = async (statusOverride?: Article['status']) => {
 
 const loadArticle = async (id: number) => {
   try {
-    const res = await fetch(`/api/articles/${id}`);
+    const res = await fetch(`/api/articles/${id}`, {
+      headers: { 'X-Tenant-ID': tenantId.value }
+    });
     if (res.ok) {
       const art = await res.json();
       editingArticle.value = {
@@ -184,9 +189,10 @@ onMounted(async () => {
   
   // Fetch roles and users from DB
   try {
+    const headers = { 'X-Tenant-ID': tenantId.value };
     const [rolesRes, usersRes] = await Promise.all([
-      fetch('/api/roles'),
-      fetch('/api/users')
+      fetch('/api/roles', { headers }),
+      fetch('/api/users', { headers })
     ]);
     if (rolesRes.ok) roles.value = await rolesRes.json();
     if (usersRes.ok) users.value = await usersRes.json();

@@ -13,14 +13,28 @@ import {
   FileText,
   FolderTree,
   ArrowLeft,
-  Languages
+  Languages,
+  Building2
 } from 'lucide-vue-next';
+import { useData } from './composables/useData';
 
 const route = useRoute();
 const router = useRouter();
 const { t, locale } = useI18n();
+const { tenantId, setTenantId } = useData();
 const isSidebarCollapsed = ref(false);
 const searchQuery = ref('');
+
+const tenants = [
+  { id: 'default', name: 'Default Tenant' },
+  { id: 'tenant1', name: 'Tenant A' },
+  { id: 'tenant2', name: 'Tenant B' }
+];
+
+const handleTenantChange = (e: Event) => {
+  const target = e.target as HTMLSelectElement;
+  setTenantId(target.value);
+};
 
 const toggleLanguage = () => {
   locale.value = locale.value === 'zh-CN' ? 'en-US' : 'zh-CN';
@@ -122,6 +136,18 @@ const navigateTo = (path: string) => {
           <Languages :size="20" class="group-hover:text-indigo-500" />
           <span v-if="!isSidebarCollapsed" class="font-medium">{{ locale === 'zh-CN' ? 'English' : '简体中文' }}</span>
         </button>
+
+        <div class="w-full flex items-center gap-3 p-3 rounded-xl text-slate-500 group">
+          <Building2 :size="20" class="group-hover:text-indigo-500 shrink-0" />
+          <select 
+            v-if="!isSidebarCollapsed"
+            :value="tenantId"
+            @change="handleTenantChange"
+            class="bg-transparent border-none focus:ring-0 text-sm font-medium w-full cursor-pointer"
+          >
+            <option v-for="t in tenants" :key="t.id" :value="t.id">{{ t.name }}</option>
+          </select>
+        </div>
 
         <div v-if="!isSidebarCollapsed" class="bg-slate-50 rounded-2xl p-4">
           <div class="flex items-center gap-3 mb-3">
