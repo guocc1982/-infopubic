@@ -1,13 +1,15 @@
 package com.example.hub;
 
-import org.springframework.boot.SpringApplication;
+import org.springblade.core.launch.BladeApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 
+@EnableDiscoveryClient
 @SpringBootApplication
 public class HubApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(HubApplication.class, args);
+		BladeApplication.run("hub-backend", HubApplication.class, args);
 	}
 
 }

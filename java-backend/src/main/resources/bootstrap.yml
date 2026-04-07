@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: hub-backend
+  profiles:
+    active: dev
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_ADDR:localhost:8848}
+      config:
+        server-addr: ${NACOS_ADDR:localhost:8848}
+        file-extension: yaml
+        shared-configs:
+          - data-id: blade.yaml
+            group: DEFAULT_GROUP
+            refresh: true
+          - data-id: blade-dev.yaml
+            group: DEFAULT_GROUP
+            refresh: true
