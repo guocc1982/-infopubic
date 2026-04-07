@@ -7,13 +7,12 @@ spring:
     username: ${DB_USER:SYSDBA}
     password: ${DB_PASSWORD:SYSDBA001}
     driver-class-name: dm.jdbc.driver.DmDriver
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.DmDialect
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
 blade:
   name: hub-backend

@@ -1,8 +1,9 @@
 package com.example.hub.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.hub.config.TenantContext;
 import com.example.hub.entity.User;
-import com.example.hub.repository.UserRepository;
+import com.example.hub.mapper.UserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,10 +15,12 @@ import java.util.List;
 public class UserController {
 
     @Autowired
-    private UserRepository userRepository;
+    private UserMapper userMapper;
 
     @GetMapping
     public List<User> getAllUsers() {
-        return userRepository.findAllByTenantId(TenantContext.getCurrentTenant());
+        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(User::getTenantId, TenantContext.getCurrentTenant());
+        return userMapper.selectList(queryWrapper);
     }
 }

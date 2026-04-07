@@ -1,32 +1,31 @@
 package com.example.hub.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
-import javax.persistence.*;
-import java.util.List;
+
+import java.io.Serializable;
 
 @Data
-@Entity
-@Table(name = "categories")
-public class Category {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+@TableName("categories")
+public class Category implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    @TableId(type = IdType.AUTO)
     private Long id;
 
-    @Column(nullable = false)
     private String name;
 
     private Long parentId;
 
     private String description;
 
-    @Column(name = "display_order")
     private Integer displayOrder = 0;
 
-    @Column(name = "is_published")
     private Integer isPublished = 1;
 
     private String icon;
 
-    @Column(name = "tenant_id")
     private String tenantId = "default";
 }

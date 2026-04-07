@@ -1,8 +1,9 @@
 package com.example.hub.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.hub.config.TenantContext;
 import com.example.hub.entity.Role;
-import com.example.hub.repository.RoleRepository;
+import com.example.hub.mapper.RoleMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,10 +15,12 @@ import java.util.List;
 public class RoleController {
 
     @Autowired
-    private RoleRepository roleRepository;
+    private RoleMapper roleMapper;
 
     @GetMapping
     public List<Role> getAllRoles() {
-        return roleRepository.findAllByTenantId(TenantContext.getCurrentTenant());
+        LambdaQueryWrapper<Role> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Role::getTenantId, TenantContext.getCurrentTenant());
+        return roleMapper.selectList(queryWrapper);
     }
 }

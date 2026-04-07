@@ -1,29 +1,28 @@
 package com.example.hub.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
-import javax.persistence.*;
+
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Data
-@Entity
-@Table(name = "comments")
-public class Comment {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+@TableName("comments")
+public class Comment implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    @TableId(type = IdType.AUTO)
     private Long id;
 
-    @Column(name = "article_id", nullable = false)
     private Long articleId;
 
-    @Column(nullable = false)
     private String author;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    @Column(name = "tenant_id")
     private String tenantId = "default";
 }

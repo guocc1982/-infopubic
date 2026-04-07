@@ -1,12 +1,14 @@
 package com.example.hub.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.hub.config.TenantContext;
 import com.example.hub.entity.Category;
-import com.example.hub.repository.CategoryRepository;
+import com.example.hub.mapper.CategoryMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/categories")
@@ -14,22 +16,29 @@ import java.util.List;
 public class CategoryController {
 
     @Autowired
-    private CategoryRepository categoryRepository;
+    private CategoryMapper categoryMapper;
 
     @GetMapping
     public List<Category> getAllCategories() {
-        return categoryRepository.findAllByTenantIdOrderByDisplayOrderAsc(TenantContext.getCurrentTenant());
+        LambdaQueryWrapper<Category> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Category::getTenantId, TenantContext.getCurrentTenant())
+                .orderByAsc(Category::getDisplayOrder);
+        return categoryMapper.selectList(queryWrapper);
     }
 
     @PostMapping
     public Category createCategory(@RequestBody Category category) {
         category.setTenantId(TenantContext.getCurrentTenant());
-        return categoryRepository.save(category);
+        categoryMapper.insert(category);
+        return category;
     }
 
     @PutMapping("/{id}")
     public Category updateCategory(@PathVariable Long id, @RequestBody Category categoryDetails) {
-        Category category = categoryRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenant())
+        LambdaQueryWrapper<Category> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Category::getId, id)
+                .eq(Category::getTenantId, TenantContext.getCurrentTenant());
+        Category category = Optional.ofNullable(categoryMapper.selectOne(queryWrapper))
                 .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
         
         category.setName(categoryDetails.getName());
@@ -39,13 +48,17 @@ public class CategoryController {
         category.setIsPublished(categoryDetails.getIsPublished());
         category.setIcon(categoryDetails.getIcon());
         
-        return categoryRepository.save(category);
+        categoryMapper.updateById(category);
+        return category;
     }
 
     @DeleteMapping("/{id}")
     public void deleteCategory(@PathVariable Long id) {
-        Category category = categoryRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenant())
+        LambdaQueryWrapper<Category> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Category::getId, id)
+                .eq(Category::getTenantId, TenantContext.getCurrentTenant());
+        Category category = Optional.ofNullable(categoryMapper.selectOne(queryWrapper))
                 .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
-        categoryRepository.delete(category);
+        categoryMapper.deleteById(category.getId());
     }
 }

@@ -1,13 +1,15 @@
 package com.example.hub.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.hub.config.TenantContext;
 import com.example.hub.entity.Article;
-import com.example.hub.repository.ArticleRepository;
+import com.example.hub.mapper.ArticleMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/articles")
@@ -15,28 +17,39 @@ import java.util.Map;
 public class ArticleController {
 
     @Autowired
-    private ArticleRepository articleRepository;
+    private ArticleMapper articleMapper;
 
     @GetMapping
     public List<Article> getAllArticles() {
-        return articleRepository.findAllByTenantIdOrderByIsPinnedDescPublishDateDesc(TenantContext.getCurrentTenant());
+        LambdaQueryWrapper<Article> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Article::getTenantId, TenantContext.getCurrentTenant())
+                .orderByDesc(Article::getIsPinned)
+                .orderByDesc(Article::getPublishDate);
+        return articleMapper.selectList(queryWrapper);
     }
 
     @GetMapping("/{id}")
     public Article getArticleById(@PathVariable Long id) {
-        return articleRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenant())
+        LambdaQueryWrapper<Article> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Article::getId, id)
+                .eq(Article::getTenantId, TenantContext.getCurrentTenant());
+        return Optional.ofNullable(articleMapper.selectOne(queryWrapper))
                 .orElseThrow(() -> new RuntimeException("Article not found with id: " + id));
     }
 
     @PostMapping
     public Article createArticle(@RequestBody Article article) {
         article.setTenantId(TenantContext.getCurrentTenant());
-        return articleRepository.save(article);
+        articleMapper.insert(article);
+        return article;
     }
 
     @PutMapping("/{id}")
     public Article updateArticle(@PathVariable Long id, @RequestBody Article articleDetails) {
-        Article article = articleRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenant())
+        LambdaQueryWrapper<Article> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Article::getId, id)
+                .eq(Article::getTenantId, TenantContext.getCurrentTenant());
+        Article article = Optional.ofNullable(articleMapper.selectOne(queryWrapper))
                 .orElseThrow(() -> new RuntimeException("Article not found with id: " + id));
         
         article.setTitle(articleDetails.getTitle());
@@ -54,12 +67,16 @@ public class ArticleController {
         article.setAllowedUsers(articleDetails.getAllowedUsers());
         article.setIsPinned(articleDetails.getIsPinned());
         
-        return articleRepository.save(article);
+        articleMapper.updateById(article);
+        return article;
     }
 
     @PatchMapping("/{id}")
     public Article patchArticle(@PathVariable Long id, @RequestBody Map<String, Object> updates) {
-        Article article = articleRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenant())
+        LambdaQueryWrapper<Article> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Article::getId, id)
+                .eq(Article::getTenantId, TenantContext.getCurrentTenant());
+        Article article = Optional.ofNullable(articleMapper.selectOne(queryWrapper))
                 .orElseThrow(() -> new RuntimeException("Article not found with id: " + id));
         
         updates.forEach((key, value) -> {
@@ -81,21 +98,28 @@ public class ArticleController {
             }
         });
         
-        return articleRepository.save(article);
+        articleMapper.updateById(article);
+        return article;
     }
 
     @DeleteMapping("/{id}")
     public void deleteArticle(@PathVariable Long id) {
-        Article article = articleRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenant())
+        LambdaQueryWrapper<Article> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Article::getId, id)
+                .eq(Article::getTenantId, TenantContext.getCurrentTenant());
+        Article article = Optional.ofNullable(articleMapper.selectOne(queryWrapper))
                 .orElseThrow(() -> new RuntimeException("Article not found with id: " + id));
-        articleRepository.delete(article);
+        articleMapper.deleteById(article.getId());
     }
 
     @PostMapping("/{id}/view")
     public void incrementViewCount(@PathVariable Long id) {
-        Article article = articleRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenant())
+        LambdaQueryWrapper<Article> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Article::getId, id)
+                .eq(Article::getTenantId, TenantContext.getCurrentTenant());
+        Article article = Optional.ofNullable(articleMapper.selectOne(queryWrapper))
                 .orElseThrow(() -> new RuntimeException("Article not found with id: " + id));
         article.setViewCount(article.getViewCount() + 1);
-        articleRepository.save(article);
+        articleMapper.updateById(article);
     }
 }
