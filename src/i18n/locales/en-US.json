@@ -43,6 +43,7 @@
     "bulkDeleteConfirm": "Are you sure you want to delete the selected {count} articles?",
     "noExportData": "No data to export",
     "linkCopied": "Link copied to clipboard",
+    "articleNotFound": "Sorry, article not found",
     "categories": "Categories",
     "addCategory": "Add Category",
     "editCategory": "Edit Category",

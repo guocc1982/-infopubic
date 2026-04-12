@@ -43,6 +43,7 @@
     "bulkDeleteConfirm": "确定要删除选中的 {count} 篇文章吗？",
     "noExportData": "没有可导出的数据",
     "linkCopied": "链接已复制到剪贴板",
+    "articleNotFound": "抱歉，未找到该文章",
     "categories": "分类目录",
     "addCategory": "新增分类",
     "editCategory": "编辑分类",

@@ -28,7 +28,7 @@ const { categories, fetchData, tenantId } = useData();
 const editingArticle = ref<Partial<Article>>({
   title: '',
   subtitle: '',
-  category_id: 0,
+  category_id: null,
   summary: '',
   content: '',
   status: 'draft',
@@ -203,7 +203,7 @@ onMounted(async () => {
   if (route.params.id) {
     loadArticle(parseInt(route.params.id as string));
   } else {
-    editingArticle.value.category_id = categories.value[0]?.id || 0;
+    editingArticle.value.category_id = categories.value[0]?.id || null;
   }
 });
 </script>

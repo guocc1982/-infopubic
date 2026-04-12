@@ -13,9 +13,8 @@ import { useData } from '../composables/useData';
 
 const router = useRouter();
 const { t } = useI18n();
-const { categories, articles, isLoading, fetchData, getCategoryName } = useData();
+const { categories, articles, isLoading, fetchData, getCategoryName, searchQuery } = useData();
 
-const searchQuery = ref('');
 const selectedCategoryId = ref<number | null>(null);
 
 const filteredArticles = computed(() => {

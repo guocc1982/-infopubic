@@ -15,7 +15,7 @@ import type { Category } from '../types';
 import CategoryTreeItem from '../components/CategoryTreeItem.vue';
 import CategorySelect from '../components/CategorySelect.vue';
 
-const { categories, fetchData } = useData();
+const { categories, fetchData, tenantId } = useData();
 const { t } = useI18n();
 const editingCategory = ref<Partial<Category> | null>(null);
 const searchQuery = ref('');
@@ -43,28 +43,49 @@ const saveCategory = async (category: Partial<Category>) => {
   const method = category.id ? 'PUT' : 'POST';
   const url = category.id ? `/api/categories/${category.id}` : '/api/categories';
   
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
   try {
     const res = await fetch(url, {
       method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(category)
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Tenant-ID': tenantId.value
+      },
+      body: JSON.stringify(category),
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
     if (res.ok) {
       await fetchData();
       editingCategory.value = null;
     }
   } catch (error) {
     console.error('Failed to save category:', error);
+  } finally {
+    clearTimeout(timeoutId);
   }
 };
 
 const deleteCategory = async (id: number) => {
   if (!confirm(t('common.deleteCategoryConfirm'))) return;
+  
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
   try {
-    const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/categories/${id}`, { 
+      method: 'DELETE',
+      headers: { 'X-Tenant-ID': tenantId.value },
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
     if (res.ok) await fetchData();
   } catch (error) {
     console.error('Failed to delete category:', error);
+  } finally {
+    clearTimeout(timeoutId);
   }
 };
 

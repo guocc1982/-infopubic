@@ -3,12 +3,23 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import Database from "better-sqlite3";
+import { createProxyMiddleware } from 'http-proxy-middleware';
+import { ServerResponse } from 'http';
+
+console.log("Starting server...");
+
+let db: Database.Database;
+try {
+  db = new Database("hub.db");
+  db.pragma('foreign_keys = ON');
+  console.log("Database connected");
+} catch (err) {
+  console.error("Failed to connect to database:", err);
+  process.exit(1);
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-const db = new Database("hub.db");
-db.pragma('foreign_keys = ON');
 
 // Tenant Middleware
 const tenantMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -157,18 +168,20 @@ function initDb() {
   const articleCount = db.prepare("SELECT COUNT(*) as count FROM articles").get() as any;
   if (articleCount.count === 0) {
     const mockArticles = [
-      ["2024年第一季度战略回顾", "Sarah J. 更新于 2 小时前", 3, "探索多模态模型如何在 2024 年重塑创意产业和软件工程的格局。", "这是正文内容...", "published", "2024-05-12", 12450, 8, "Sarah J."],
-      ["新员工入职指南", "HR 部门", 4, "欢迎加入公司！这份指南将帮助你快速熟悉环境和流程。", "入职第一天需要准备...", "published", "2024-04-01", 3500, 15, "HR Admin"],
-      ["关于端午节放假的通知", "行政部", 3, "2024年端午节放假安排及注意事项。", "根据国家法定节假日安排...", "published", "2024-06-01", 890, 2, "行政部"],
-      ["AI 技术在产品中的应用探索", "技术委员会", 1, "讨论如何将最新的大语言模型集成到我们的核心产品线中。", "技术架构方案如下...", "draft", "2024-06-10", 0, 12, "张工"],
-      ["2023 年度优秀员工表彰名单", "总裁办", 3, "回顾过去一年中表现卓越的团队 and 个人。", "经过严格评选...", "published", "2024-02-15", 5600, 5, "总裁办"],
-      ["远程办公安全规范 (V2.0)", "IT 安全组", 4, "更新后的远程访问 VPN 使用规范和数据安全要求。", "请所有员工务必遵守...", "pending", "2024-06-15", 0, 10, "Security Team"],
-      ["公司十周年庆典策划草案", "市场部", 1, "初步构思公司十周年庆典的主题、场地 and 活动流程。", "方案 A：户外团建...", "draft", "2024-06-20", 0, 20, "市场部"],
-      ["2022 年差旅报销政策 (已废止)", "财务部", 4, "旧版的差旅报销标准和流程说明。", "本政策已由 2024 版取代...", "archived", "2022-01-10", 1200, 8, "Finance"],
-      ["季度团建活动投票", "行政部", 3, "请大家在三个备选方案中选出最喜欢的团建目的地。", "方案 1：海边烧烤...", "published", "2024-05-20", 2100, 3, "行政部"],
-      ["新版办公系统操作手册", "IT 部门", 4, "详细介绍新上线的 OA 系统各项功能的使用方法。", "登录方式、审批流...", "pending", "2024-06-18", 0, 25, "IT Support"],
-      ["五月份销售业绩简报", "销售管理部", 1, "分析五月份各区域销售目标的达成情况及市场反馈。", "华东区表现亮眼...", "published", "2024-06-05", 1500, 6, "Sales Manager"],
-      ["关于办公区绿化升级的建议", "员工委员会", 2, "收集员工对改善办公环境绿植布置的意见。", "希望能增加一些多肉植物...", "archived", "2023-11-20", 450, 4, "小王"]
+      ["2024年第一季度战略回顾", "Sarah J. 更新于 2 小时前", 3, "探索多模态模型如何在 2024 年重塑创意产业和软件工程的格局。", "<h2>战略重点</h2><p>本季度我们将重点放在 AI 原生应用的开发上...</p>", "published", "2024-05-12", 12450, 8, "Sarah J."],
+      ["新员工入职指南", "HR 部门", 4, "欢迎加入公司！这份指南将帮助你快速熟悉环境和流程。", "<h3>欢迎加入！</h3><p>你的入职第一天将从领取电脑开始...</p>", "published", "2024-04-01", 3500, 15, "HR Admin"],
+      ["关于端午节放假的通知", "行政部", 3, "2024年端午节放假安排及注意事项。", "<p>根据国家法定节假日安排，公司端午节放假时间为...</p>", "published", "2024-06-01", 890, 2, "行政部"],
+      ["AI 技术在产品中的应用探索", "技术委员会", 1, "讨论如何将最新的大语言模型集成到我们的核心产品线中。", "<p>我们正在评估 Gemini Pro 的集成方案...</p>", "draft", "2024-06-10", 0, 12, "张工"],
+      ["2023 年度优秀员工表彰名单", "总裁办", 3, "回顾过去一年中表现卓越的团队 and 个人。", "<p>恭喜以下同事获得年度优秀员工称号...</p>", "published", "2024-02-15", 5600, 5, "总裁办"],
+      ["远程办公安全规范 (V2.0)", "IT 安全组", 4, "更新后的远程访问 VPN 使用规范和数据安全要求。", "<p>为了保障公司数据安全，请务必遵守以下 VPN 使用规范...</p>", "pending", "2024-06-15", 0, 10, "Security Team"],
+      ["公司十周年庆典策划草案", "市场部", 1, "初步构思公司十周年庆典的主题、场地 and 活动流程。", "<p>庆典主题：十年同行，共创未来...</p>", "draft", "2024-06-20", 0, 20, "市场部"],
+      ["2022 年差旅报销政策 (已废止)", "财务部", 4, "旧版的差旅报销标准和流程说明。", "<p>本政策已失效，请查看 2024 最新版...</p>", "archived", "2022-01-10", 1200, 8, "Finance"],
+      ["季度团建活动投票", "行政部", 3, "请大家在三个备选方案中选出最喜欢的团建目的地。", "<p>方案 A：莫干山民宿；方案 B：崇明岛骑行...</p>", "published", "2024-05-20", 2100, 3, "行政部"],
+      ["新版办公系统操作手册", "IT 部门", 4, "详细介绍新上线的 OA 系统各项功能的使用方法。", "<p>第一步：使用公司邮箱登录；第二步：完善个人资料...</p>", "pending", "2024-06-18", 0, 25, "IT Support"],
+      ["五月份销售业绩简报", "销售管理部", 1, "分析五月份各区域销售目标的达成情况及市场反馈。", "<p>本月销售额同比增长 15%...</p>", "published", "2024-06-05", 1500, 6, "Sales Manager"],
+      ["关于办公区绿化升级的建议", "员工委员会", 2, "收集员工对改善办公环境绿植布置的意见。", "<p>我们计划在每个工位增加一盆绿植...</p>", "archived", "2023-11-20", 450, 4, "小王"],
+      ["2024年夏季团建活动安排", "行政部", 3, "关于今年夏季团建的详细行程和注意事项。", "<p>我们将前往三亚进行为期三天的团建活动...</p>", "published", "2024-06-25", 120, 5, "行政部"],
+      ["技术沙龙：大模型微调实践", "技术委员会", 1, "本周五下午的技术分享会预告。", "<p>主讲人：李博士；地点：3号会议室...</p>", "published", "2024-06-28", 450, 10, "张工"]
     ];
 
     const insert = db.prepare(`
@@ -183,10 +196,15 @@ function initDb() {
 initDb();
 
 const app = express();
+
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", database: !!db, javaBackend: !!process.env.JAVA_BACKEND_URL });
+});
+
 app.use(express.json());
 app.use(tenantMiddleware);
 
-// API Routes
+// Local API Routes (Take precedence)
 app.get("/api/categories", (req, res) => {
   const categories = db.prepare("SELECT * FROM categories WHERE tenant_id = ? ORDER BY display_order ASC").all((req as any).tenantId);
   res.json(categories);
@@ -194,28 +212,43 @@ app.get("/api/categories", (req, res) => {
 
 app.post("/api/categories", (req, res) => {
   const { name, parent_id, description, display_order, is_published, icon } = req.body;
-  const result = db.prepare(`
-    INSERT INTO categories (name, parent_id, description, display_order, is_published, icon, tenant_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(name, parent_id, description, display_order, is_published, icon, (req as any).tenantId);
-  res.json({ id: result.lastInsertRowid });
+  try {
+    const result = db.prepare(`
+      INSERT INTO categories (name, parent_id, description, display_order, is_published, icon, tenant_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(name, parent_id, description, display_order, is_published ? 1 : 0, icon, (req as any).tenantId);
+    res.json({ id: result.lastInsertRowid });
+  } catch (error) {
+    console.error('Error creating category:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
 });
 
 app.put("/api/categories/:id", (req, res) => {
   const { id } = req.params;
   const { name, parent_id, description, display_order, is_published, icon } = req.body;
-  db.prepare(`
-    UPDATE categories 
-    SET name = ?, parent_id = ?, description = ?, display_order = ?, is_published = ?, icon = ?
-    WHERE id = ? AND tenant_id = ?
-  `).run(name, parent_id, description, display_order, is_published, icon, id, (req as any).tenantId);
-  res.json({ success: true });
+  try {
+    db.prepare(`
+      UPDATE categories 
+      SET name = ?, parent_id = ?, description = ?, display_order = ?, is_published = ?, icon = ?
+      WHERE id = ? AND tenant_id = ?
+    `).run(name, parent_id, description, display_order, is_published ? 1 : 0, icon, id, (req as any).tenantId);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating category:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
 });
 
 app.delete("/api/categories/:id", (req, res) => {
   const { id } = req.params;
-  db.prepare("DELETE FROM categories WHERE id = ? AND tenant_id = ?").run(id, (req as any).tenantId);
-  res.json({ success: true });
+  try {
+    db.prepare("DELETE FROM categories WHERE id = ? AND tenant_id = ?").run(id, (req as any).tenantId);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting category:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
 });
 
 app.get("/api/articles", (req, res) => {
@@ -241,12 +274,13 @@ app.get("/api/articles/:id", (req, res) => {
 
 app.post("/api/articles", (req, res) => {
   const { title, subtitle, category_id, summary, content, thumbnail_url, status, publish_date, reading_time, allow_anonymous, allow_all_registered, allowed_roles, allowed_users, is_pinned } = req.body;
-  console.log('Creating new article:', { title, status, tenantId: (req as any).tenantId });
+  const finalCategoryId = category_id || null;
+  console.log('Creating new article:', { title, status, category_id: finalCategoryId, tenantId: (req as any).tenantId });
   try {
     const result = db.prepare(`
       INSERT INTO articles (title, subtitle, category_id, summary, content, thumbnail_url, status, publish_date, reading_time, allow_anonymous, allow_all_registered, allowed_roles, allowed_users, is_pinned, tenant_id)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(title, subtitle, category_id, summary, content, thumbnail_url, status, publish_date, reading_time, allow_anonymous ? 1 : 0, allow_all_registered ? 1 : 0, allowed_roles, allowed_users, is_pinned ? 1 : 0, (req as any).tenantId);
+    `).run(title, subtitle, finalCategoryId, summary, content, thumbnail_url, status, publish_date, reading_time, allow_anonymous ? 1 : 0, allow_all_registered ? 1 : 0, allowed_roles, allowed_users, is_pinned ? 1 : 0, (req as any).tenantId);
     console.log('Article created successfully, ID:', result.lastInsertRowid);
     res.json({ id: result.lastInsertRowid });
   } catch (error) {
@@ -258,13 +292,14 @@ app.post("/api/articles", (req, res) => {
 app.put("/api/articles/:id", (req, res) => {
   const { id } = req.params;
   const { title, subtitle, category_id, summary, content, thumbnail_url, status, publish_date, reading_time, allow_anonymous, allow_all_registered, allowed_roles, allowed_users, is_pinned } = req.body;
-  console.log('Updating article:', { id, title, status, tenantId: (req as any).tenantId });
+  const finalCategoryId = category_id || null;
+  console.log('Updating article:', { id, title, status, category_id: finalCategoryId, tenantId: (req as any).tenantId });
   try {
     db.prepare(`
       UPDATE articles 
       SET title = ?, subtitle = ?, category_id = ?, summary = ?, content = ?, thumbnail_url = ?, status = ?, publish_date = ?, reading_time = ?, allow_anonymous = ?, allow_all_registered = ?, allowed_roles = ?, allowed_users = ?, is_pinned = ?
       WHERE id = ? AND tenant_id = ?
-    `).run(title, subtitle, category_id, summary, content, thumbnail_url, status, publish_date, reading_time, allow_anonymous ? 1 : 0, allow_all_registered ? 1 : 0, allowed_roles, allowed_users, is_pinned ? 1 : 0, id, (req as any).tenantId);
+    `).run(title, subtitle, finalCategoryId, summary, content, thumbnail_url, status, publish_date, reading_time, allow_anonymous ? 1 : 0, allow_all_registered ? 1 : 0, allowed_roles, allowed_users, is_pinned ? 1 : 0, id, (req as any).tenantId);
     console.log('Article updated successfully, ID:', id);
     res.json({ success: true });
   } catch (error) {
@@ -283,6 +318,9 @@ app.patch("/api/articles/:id", (req, res) => {
   const values = fields.map(field => {
     if (field === 'allow_anonymous' || field === 'allow_all_registered' || field === 'is_pinned') {
       return updates[field] ? 1 : 0;
+    }
+    if (field === 'category_id') {
+      return updates[field] || null;
     }
     return updates[field];
   });
@@ -327,6 +365,38 @@ app.get("/api/users", (req, res) => {
   const users = db.prepare("SELECT * FROM users WHERE tenant_id = ?").all((req as any).tenantId);
   res.json(users);
 });
+
+// API Proxy to Java Backend (Fallback for non-local routes)
+let JAVA_BACKEND_URL = process.env.JAVA_BACKEND_URL;
+if (JAVA_BACKEND_URL) {
+  if (!JAVA_BACKEND_URL.startsWith('http')) {
+    JAVA_BACKEND_URL = 'http://' + JAVA_BACKEND_URL;
+  }
+  console.log(`Proxying remaining /api requests to Java Backend: ${JAVA_BACKEND_URL}`);
+  app.use('/api', createProxyMiddleware({
+    target: JAVA_BACKEND_URL,
+    changeOrigin: true,
+    on: {
+      proxyReq: (proxyReq, req, res) => {
+        const tenantId = (req as any).tenantId;
+        if (tenantId) {
+          proxyReq.setHeader('X-Tenant-ID', tenantId);
+        }
+        console.log(`Proxying ${req.method} ${req.url} to ${JAVA_BACKEND_URL}`);
+      },
+      error: (err, req, res) => {
+        console.error('Proxy Error:', err);
+        if (res && 'statusCode' in res && typeof (res as any).end === 'function') {
+          (res as any).statusCode = 500;
+          (res as any).end('Proxy Error: ' + err.message);
+        }
+      }
+    },
+    secure: false,
+    timeout: 5000,
+    proxyTimeout: 5000
+  }));
+}
 
 // Vite middleware for development
 if (process.env.NODE_ENV !== "production") {

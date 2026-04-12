@@ -21,9 +21,8 @@ import { useData } from './composables/useData';
 const route = useRoute();
 const router = useRouter();
 const { t, locale } = useI18n();
-const { tenantId, setTenantId } = useData();
+const { tenantId, setTenantId, searchQuery } = useData();
 const isSidebarCollapsed = ref(false);
-const searchQuery = ref('');
 
 const tenants = [
   { id: 'default', name: 'Default Tenant' },

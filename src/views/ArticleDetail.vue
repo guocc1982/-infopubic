@@ -10,7 +10,8 @@ import {
   BookOpen, 
   MessageSquare, 
   Send, 
-  Link as LinkIcon 
+  Link as LinkIcon,
+  AlertCircle
 } from 'lucide-vue-next';
 import { useData } from '../composables/useData';
 import type { Article, Comment } from '../types';
@@ -226,5 +227,17 @@ onMounted(async () => {
         </div>
       </div>
     </div>
+  </div>
+  <div v-else class="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-dashed border-slate-300 max-w-4xl mx-auto">
+    <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
+      <AlertCircle :size="40" />
+    </div>
+    <h3 class="text-lg font-semibold text-slate-900">{{ t('common.articleNotFound') }}</h3>
+    <button 
+      @click="router.push('/reading-list')"
+      class="mt-4 flex items-center gap-2 text-indigo-600 font-bold hover:gap-3 transition-all"
+    >
+      <ArrowLeft :size="18" /> {{ t('common.backToList') }}
+    </button>
   </div>
 </template>

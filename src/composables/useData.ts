@@ -6,6 +6,7 @@ const articles = ref<Article[]>([]);
 const isLoading = ref(false);
 const isInitialized = ref(false);
 const tenantId = ref(localStorage.getItem('tenantId') || 'default');
+const searchQuery = ref('');
 
 export function useData() {
   const setTenantId = (id: string) => {
@@ -24,13 +25,21 @@ export function useData() {
         'X-Tenant-ID': tenantId.value
       };
 
+      // Add a timeout to fetch calls
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
       const [catsRes, artsRes] = await Promise.all([
-        fetch('/api/categories', { headers }),
-        fetch('/api/articles', { headers })
+        fetch('/api/categories', { headers, signal: controller.signal }),
+        fetch('/api/articles', { headers, signal: controller.signal })
       ]);
       
+      clearTimeout(timeoutId);
+      
       if (!catsRes.ok || !artsRes.ok) {
-        throw new Error(`API error: ${catsRes.status} ${artsRes.status}`);
+        const catsError = !catsRes.ok ? `Categories: ${catsRes.status} ${catsRes.statusText}` : '';
+        const artsError = !artsRes.ok ? `Articles: ${artsRes.status} ${artsRes.statusText}` : '';
+        throw new Error(`API error: ${catsError} ${artsError}`.trim());
       }
 
       const catsData = await catsRes.json();
@@ -63,6 +72,7 @@ export function useData() {
     isLoading,
     isInitialized,
     tenantId,
+    searchQuery,
     setTenantId,
     fetchData,
     getCategoryName
