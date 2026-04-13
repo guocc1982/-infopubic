@@ -23,7 +23,7 @@ public class Category implements Serializable {
 
     private Integer displayOrder = 0;
 
-    private Integer isPublished = 1;
+    private Boolean isPublished = true;
 
     private String icon;
 

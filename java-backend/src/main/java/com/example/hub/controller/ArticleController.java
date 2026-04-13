@@ -90,11 +90,17 @@ public class ArticleController {
                 case "status": article.setStatus((String) value); break;
                 case "publish_date": article.setPublishDate((String) value); break;
                 case "reading_time": article.setReadingTime(((Number) value).intValue()); break;
-                case "allow_anonymous": article.setAllowAnonymous((Boolean) value ? 1 : 0); break;
-                case "allow_all_registered": article.setAllowAllRegistered((Boolean) value ? 1 : 0); break;
+                case "allow_anonymous": article.setAllowAnonymous((Boolean) value); break;
+                case "allow_all_registered": article.setAllowAllRegistered((Boolean) value); break;
                 case "allowed_roles": article.setAllowedRoles((String) value); break;
                 case "allowed_users": article.setAllowedUsers((String) value); break;
-                case "is_pinned": article.setIsPinned(((Number) value).intValue()); break;
+                case "is_pinned": 
+                    if (value instanceof Boolean) {
+                        article.setIsPinned((Boolean) value);
+                    } else if (value instanceof Number) {
+                        article.setIsPinned(((Number) value).intValue() != 0);
+                    }
+                    break;
             }
         });
         

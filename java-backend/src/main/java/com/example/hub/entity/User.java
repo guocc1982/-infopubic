@@ -19,5 +19,9 @@ public class User implements Serializable {
 
     private String displayName;
 
+    private String password;
+
+    private String role = "user";
+
     private String tenantId = "default";
 }

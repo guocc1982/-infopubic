@@ -37,11 +37,11 @@ public class Article implements Serializable {
 
     private String author;
     
-    private Integer isPinned = 0;
+    private Boolean isPinned = false;
 
-    private Integer allowAnonymous = 1;
+    private Boolean allowAnonymous = true;
 
-    private Integer allowAllRegistered = 0;
+    private Boolean allowAllRegistered = false;
 
     private String allowedRoles;
 

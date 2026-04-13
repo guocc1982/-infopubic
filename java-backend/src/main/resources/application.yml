@@ -2,6 +2,8 @@ server:
   port: 8080
 
 spring:
+  jackson:
+    property-naming-strategy: SNAKE_CASE
   datasource:
     url: jdbc:dm://${DB_HOST:localhost}:${DB_PORT:5236}/${DB_NAME:DAMENG}
     username: ${DB_USER:SYSDBA}
