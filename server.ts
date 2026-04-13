@@ -442,8 +442,8 @@ if (JAVA_BACKEND_URL) {
   if (!JAVA_BACKEND_URL.startsWith('http')) {
     JAVA_BACKEND_URL = 'http://' + JAVA_BACKEND_URL;
   }
-  console.log(`Proxying remaining /api requests to Java Backend: ${JAVA_BACKEND_URL}`);
-  app.use('/api', createProxyMiddleware({
+  console.log(`Proxying API, Swagger, and Webjars requests to Java Backend: ${JAVA_BACKEND_URL}`);
+  app.use(['/api', '/swagger-ui', '/swagger-ui.html', '/v3/api-docs', '/webjars'], createProxyMiddleware({
     target: JAVA_BACKEND_URL,
     changeOrigin: true,
     on: {

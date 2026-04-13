@@ -16,7 +16,8 @@ import {
   Languages,
   Building2,
   LogOut,
-  LogIn
+  LogIn,
+  FileCode
 } from 'lucide-vue-next';
 import { useData } from './composables/useData';
 import { useAuth } from './composables/useAuth';
@@ -24,7 +25,7 @@ import { useAuth } from './composables/useAuth';
 const route = useRoute();
 const router = useRouter();
 const { t, locale } = useI18n();
-const { tenantId, setTenantId, searchQuery } = useData();
+const { tenantId, setTenantId, searchQuery, currentArticleTitle } = useData();
 const { user, isAuthenticated, logout } = useAuth();
 const isSidebarCollapsed = ref(false);
 
@@ -60,7 +61,7 @@ const pageTitle = computed(() => {
     case 'reading-list': return t('nav.readingList');
     case 'info-list': return t('nav.contentManagement');
     case 'category-mgmt': return t('nav.categoryManagement');
-    case 'article-detail': return t('article.noTitle');
+    case 'article-detail': return currentArticleTitle.value || t('article.noTitle');
     case 'article-editor': return route.params.id ? t('common.edit') : t('common.publish');
     default: return 'CMS';
   }
@@ -135,6 +136,17 @@ const navigateTo = (path: string) => {
           <FolderTree :size="20" :class="currentView === 'category-mgmt' ? 'text-indigo-600' : 'group-hover:text-indigo-500'" />
           <span v-if="!isSidebarCollapsed" class="font-medium">{{ t('nav.categoryManagement') }}</span>
         </router-link>
+
+        <a 
+          href="/swagger-ui/index.html"
+          target="_blank"
+          :class="[
+            'w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group text-slate-500 hover:bg-slate-50'
+          ]"
+        >
+          <FileCode :size="20" class="group-hover:text-indigo-500" />
+          <span v-if="!isSidebarCollapsed" class="font-medium">API {{ t('common.docs') || 'Docs' }}</span>
+        </a>
       </nav>
 
       <div class="p-4 border-t border-slate-100 space-y-2">

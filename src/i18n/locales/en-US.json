@@ -26,6 +26,7 @@
     "bulkEdit": "Bulk Edit",
     "advancedFilter": "Advanced Filter",
     "export": "Export",
+    "docs": "Docs",
     "reset": "Reset",
     "done": "Done",
     "confirm": "Confirm",
@@ -82,6 +83,7 @@
   },
   "article": {
     "title": "Title",
+    "noTitle": "Untitled",
     "subtitle": "Subtitle",
     "summary": "Summary",
     "content": "Content",

@@ -1,7 +1,11 @@
 server:
   port: 8080
+  forward-headers-strategy: framework
 
 spring:
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
   jackson:
     property-naming-strategy: SNAKE_CASE
   datasource:
@@ -15,6 +19,10 @@ mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+springdoc:
+  swagger-ui:
+    enabled: true
 
 blade:
   name: hub-backend

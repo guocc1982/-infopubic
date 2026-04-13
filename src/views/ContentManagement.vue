@@ -149,7 +149,7 @@ const deleteArticle = async (id: number) => {
     const res = await apiFetch(`/api/articles/${id}`, { 
       method: 'DELETE'
     });
-    if (res.ok) await fetchData();
+    if (res.ok) await fetchData(true);
   } catch (error) {
     console.error('Failed to delete article:', error);
   }
@@ -164,7 +164,7 @@ const bulkDelete = async () => {
       })
     ));
     selectedArticleIds.value = [];
-    await fetchData();
+    await fetchData(true);
   } catch (error) {
     console.error('Failed to delete articles:', error);
   }
@@ -233,7 +233,7 @@ const performBulkEdit = async () => {
     ));
     isBulkEditModalOpen.value = false;
     selectedArticleIds.value = [];
-    await fetchData();
+    await fetchData(true);
   } catch (error) {
     console.error('Failed to perform bulk edit:', error);
   }
@@ -259,15 +259,14 @@ const handleMoreAction = async (action: string, article: Article) => {
       break;
     case 'pin':
       try {
-        await fetch(`/api/articles/${article.id}`, {
+        await apiFetch(`/api/articles/${article.id}`, {
           method: 'PATCH',
           headers: { 
-            'Content-Type': 'application/json',
-            'X-Tenant-ID': tenantId.value
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify({ is_pinned: article.is_pinned ? 0 : 1 })
         });
-        await fetchData();
+        await fetchData(true);
       } catch (error) {
         console.error('Failed to pin article:', error);
       }
@@ -283,15 +282,14 @@ const handleMoreAction = async (action: string, article: Article) => {
 
 const saveArticleStatus = async (id: number, status: Article['status']) => {
   try {
-    const res = await fetch(`/api/articles/${id}`, {
+    const res = await apiFetch(`/api/articles/${id}`, {
       method: 'PATCH',
       headers: { 
-        'Content-Type': 'application/json',
-        'X-Tenant-ID': tenantId.value
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({ status })
     });
-    if (res.ok) await fetchData();
+    if (res.ok) await fetchData(true);
   } catch (error) {
     console.error('Failed to update status:', error);
   }
@@ -508,7 +506,7 @@ onMounted(() => {
                   <div class="min-w-0">
                     <p class="text-sm font-bold text-slate-900 line-clamp-1 group-hover:text-indigo-600 transition-colors">{{ article.title }}</p>
                     <div class="flex items-center gap-2 mt-1">
-                      <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-100 px-1.5 py-0.5 rounded">{{ article.author || t('article.admin') }}</span>
+                      <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-100 px-1.5 py-0.5 rounded">{{ article.author || '管理员' }}</span>
                       <span class="text-[10px] text-slate-300">|</span>
                       <span class="text-[10px] text-slate-400">{{ article.reading_time }} {{ t('article.minutes') }} read</span>
                     </div>

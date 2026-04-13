@@ -26,6 +26,7 @@
     "bulkEdit": "批量修改",
     "advancedFilter": "高级筛选",
     "export": "导出",
+    "docs": "文档",
     "reset": "重置",
     "done": "完成",
     "confirm": "确认",
@@ -82,6 +83,7 @@
   },
   "article": {
     "title": "标题",
+    "noTitle": "无标题",
     "subtitle": "副标题",
     "summary": "摘要",
     "content": "内容",

@@ -40,6 +40,9 @@ public class ArticleController {
     @PostMapping
     public Article createArticle(@RequestBody Article article) {
         article.setTenantId(TenantContext.getCurrentTenant());
+        if (article.getAuthor() == null || article.getAuthor().isEmpty()) {
+            article.setAuthor("管理员");
+        }
         articleMapper.insert(article);
         return article;
     }
@@ -61,6 +64,7 @@ public class ArticleController {
         article.setStatus(articleDetails.getStatus());
         article.setPublishDate(articleDetails.getPublishDate());
         article.setReadingTime(articleDetails.getReadingTime());
+        article.setAuthor(articleDetails.getAuthor());
         article.setAllowAnonymous(articleDetails.getAllowAnonymous());
         article.setAllowAllRegistered(articleDetails.getAllowAllRegistered());
         article.setAllowedRoles(articleDetails.getAllowedRoles());
@@ -90,6 +94,7 @@ public class ArticleController {
                 case "status": article.setStatus((String) value); break;
                 case "publish_date": article.setPublishDate((String) value); break;
                 case "reading_time": article.setReadingTime(((Number) value).intValue()); break;
+                case "author": article.setAuthor((String) value); break;
                 case "allow_anonymous": article.setAllowAnonymous((Boolean) value); break;
                 case "allow_all_registered": article.setAllowAllRegistered((Boolean) value); break;
                 case "allowed_roles": article.setAllowedRoles((String) value); break;

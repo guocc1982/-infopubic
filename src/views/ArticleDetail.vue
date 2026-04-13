@@ -20,7 +20,7 @@ import type { Article, Comment } from '../types';
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
-const { getCategoryName, fetchData, tenantId } = useData();
+const { getCategoryName, fetchData, tenantId, currentArticleTitle } = useData();
 const { apiFetch } = useApi();
 
 const viewingArticle = ref<Article | null>(null);
@@ -33,7 +33,9 @@ const fetchArticle = async (id: number) => {
   try {
     const res = await apiFetch(`/api/articles/${id}`).catch(err => ({ ok: false, status: 0, statusText: err.message }));
     if (res.ok) {
-      viewingArticle.value = await (res as Response).json();
+      const data = await (res as Response).json();
+      viewingArticle.value = data;
+      currentArticleTitle.value = data.title;
       // Increment view count
       apiFetch(`/api/articles/${id}/view`, { 
         method: 'POST'

@@ -19,6 +19,7 @@ import ImageSelectorModal from '../components/ImageSelectorModal.vue';
 import CategorySelect from '../components/CategorySelect.vue';
 import { useData } from '../composables/useData';
 import { useApi } from '../composables/useApi';
+import { useAuth } from '../composables/useAuth';
 import type { Article } from '../types';
 
 const route = useRoute();
@@ -26,6 +27,7 @@ const router = useRouter();
 const { t } = useI18n();
 const { categories, fetchData, tenantId } = useData();
 const { apiFetch } = useApi();
+const { user } = useAuth();
 
 const editingArticle = ref<Partial<Article>>({
   title: '',
@@ -37,7 +39,7 @@ const editingArticle = ref<Partial<Article>>({
   publish_date: new Date().toISOString().split('T')[0],
   view_count: 0,
   reading_time: 5,
-  author: '管理员',
+  author: user.value?.display_name || user.value?.username || '管理员',
   allow_anonymous: true,
   allow_all_registered: false,
   allowed_roles: '',
@@ -216,7 +218,9 @@ onMounted(async () => {
         </button>
         <div class="h-6 w-[1px] bg-slate-200"></div>
         <div class="flex items-center gap-2">
-          <span class="text-sm font-bold text-slate-900">{{ editingArticle.id ? t('common.edit') : t('common.publish') }}</span>
+          <span class="text-sm font-bold text-slate-900">
+            {{ isPreviewMode ? (editingArticle.title || t('article.noTitle')) : (editingArticle.id ? t('common.edit') : t('common.publish')) }}
+          </span>
           <span v-if="editingArticle.status" :class="['px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider', getStatusColor(editingArticle.status)]">
             {{ statusToText(editingArticle.status) }}
           </span>
@@ -349,6 +353,15 @@ onMounted(async () => {
             <input 
               v-model="editingArticle.reading_time"
               type="number"
+              class="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-sm transition-all"
+            />
+          </div>
+
+          <div class="space-y-2">
+            <label class="text-xs font-bold text-slate-700">{{ t('article.author') }}</label>
+            <input 
+              v-model="editingArticle.author"
+              type="text"
               class="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-sm transition-all"
             />
           </div>

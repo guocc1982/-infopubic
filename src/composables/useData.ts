@@ -8,6 +8,7 @@ const isLoading = ref(false);
 const isInitialized = ref(false);
 const tenantId = ref(localStorage.getItem('tenantId') || 'default');
 const searchQuery = ref('');
+const currentArticleTitle = ref('');
 
 export function useData() {
   const { apiFetch } = useApi();
@@ -63,6 +64,7 @@ export function useData() {
     searchQuery,
     setTenantId,
     fetchData,
-    getCategoryName
+    getCategoryName,
+    currentArticleTitle
   };
 }
