@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, provide } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { 
@@ -21,13 +21,56 @@ import {
 } from 'lucide-vue-next';
 import { useData } from './composables/useData';
 import { useAuth } from './composables/useAuth';
+import { useApi } from './composables/useApi';
 
 const route = useRoute();
 const router = useRouter();
 const { t, locale } = useI18n();
 const { tenantId, setTenantId, searchQuery, currentArticleTitle } = useData();
 const { user, isAuthenticated, logout } = useAuth();
+const { apiFetch } = useApi();
 const isSidebarCollapsed = ref(false);
+
+const systemSettings = ref({
+  site_name: 'Hub CMS',
+  theme: 'light',
+  primary_color: '#4f46e5'
+});
+
+provide('systemSettings', systemSettings);
+
+const fetchSystemSettings = async () => {
+  try {
+    const res = await apiFetch('/api/settings');
+    if (res.ok) {
+      const data = await res.json();
+      systemSettings.value = { ...systemSettings.value, ...data };
+      applyGlobalSettings();
+    }
+  } catch (error) {
+    console.error('Failed to fetch system settings:', error);
+  }
+};
+
+const applyGlobalSettings = () => {
+  // Apply theme
+  if (systemSettings.value.theme === 'dark') {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
+  
+  // Apply primary color (CSS variable)
+  document.documentElement.style.setProperty('--primary-color', systemSettings.value.primary_color);
+};
+
+onMounted(() => {
+  fetchSystemSettings();
+  window.addEventListener('settings-updated', (e: any) => {
+    systemSettings.value = { ...systemSettings.value, ...e.detail };
+    applyGlobalSettings();
+  });
+});
 
 const tenants = [
   { id: 'default', name: 'Default Tenant' },
@@ -38,6 +81,7 @@ const tenants = [
 const handleTenantChange = (e: Event) => {
   const target = e.target as HTMLSelectElement;
   setTenantId(target.value);
+  fetchSystemSettings(); // Re-fetch settings for new tenant
 };
 
 const toggleLanguage = () => {
@@ -49,6 +93,7 @@ const currentView = computed(() => {
   if (route.path === '/reading-list') return 'reading-list';
   if (route.path === '/content-management') return 'info-list';
   if (route.path === '/category-management') return 'category-mgmt';
+  if (route.path === '/settings') return 'settings';
   if (route.path.startsWith('/article/')) {
     if (route.path.includes('/edit/') || route.path.endsWith('/new')) return 'article-editor';
     return 'article-detail';
@@ -61,9 +106,10 @@ const pageTitle = computed(() => {
     case 'reading-list': return t('nav.readingList');
     case 'info-list': return t('nav.contentManagement');
     case 'category-mgmt': return t('nav.categoryManagement');
+    case 'settings': return t('nav.settings');
     case 'article-detail': return currentArticleTitle.value || t('article.noTitle');
     case 'article-editor': return route.params.id ? t('common.edit') : t('common.publish');
-    default: return 'CMS';
+    default: return systemSettings.value.site_name;
   }
 });
 
@@ -89,10 +135,10 @@ const navigateTo = (path: string) => {
     >
       <div class="p-6 flex items-center justify-between border-b border-slate-100">
         <div v-if="!isSidebarCollapsed" class="flex items-center gap-3">
-          <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
+          <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white" :style="{ backgroundColor: systemSettings.primary_color }">
             <LayoutDashboard :size="20" />
           </div>
-          <span class="font-bold text-lg tracking-tight">CMS</span>
+          <span class="font-bold text-lg tracking-tight">{{ systemSettings.site_name }}</span>
         </div>
         <button 
           @click="isSidebarCollapsed = !isSidebarCollapsed"
@@ -110,8 +156,9 @@ const navigateTo = (path: string) => {
             'w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group',
             currentView === 'reading-list' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-500 hover:bg-slate-50'
           ]"
+          :style="currentView === 'reading-list' ? { color: systemSettings.primary_color, backgroundColor: `color-mix(in srgb, ${systemSettings.primary_color} 10%, white)` } : {}"
         >
-          <BookOpen :size="20" :class="currentView === 'reading-list' ? 'text-indigo-600' : 'group-hover:text-indigo-500'" />
+          <BookOpen :size="20" :class="currentView === 'reading-list' ? '' : 'group-hover:text-indigo-500'" :style="currentView === 'reading-list' ? { color: systemSettings.primary_color } : {}" />
           <span v-if="!isSidebarCollapsed" class="font-medium">{{ t('nav.readingList') }}</span>
         </router-link>
 
@@ -121,8 +168,9 @@ const navigateTo = (path: string) => {
             'w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group',
             currentView === 'info-list' || currentView === 'article-editor' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-500 hover:bg-slate-50'
           ]"
+          :style="currentView === 'info-list' || currentView === 'article-editor' ? { color: systemSettings.primary_color, backgroundColor: `color-mix(in srgb, ${systemSettings.primary_color} 10%, white)` } : {}"
         >
-          <FileText :size="20" :class="currentView === 'info-list' || currentView === 'article-editor' ? 'text-indigo-600' : 'group-hover:text-indigo-500'" />
+          <FileText :size="20" :class="currentView === 'info-list' || currentView === 'article-editor' ? '' : 'group-hover:text-indigo-500'" :style="currentView === 'info-list' || currentView === 'article-editor' ? { color: systemSettings.primary_color } : {}" />
           <span v-if="!isSidebarCollapsed" class="font-medium">{{ t('nav.contentManagement') }}</span>
         </router-link>
 
@@ -132,8 +180,9 @@ const navigateTo = (path: string) => {
             'w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group',
             currentView === 'category-mgmt' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-500 hover:bg-slate-50'
           ]"
+          :style="currentView === 'category-mgmt' ? { color: systemSettings.primary_color, backgroundColor: `color-mix(in srgb, ${systemSettings.primary_color} 10%, white)` } : {}"
         >
-          <FolderTree :size="20" :class="currentView === 'category-mgmt' ? 'text-indigo-600' : 'group-hover:text-indigo-500'" />
+          <FolderTree :size="20" :class="currentView === 'category-mgmt' ? '' : 'group-hover:text-indigo-500'" :style="currentView === 'category-mgmt' ? { color: systemSettings.primary_color } : {}" />
           <span v-if="!isSidebarCollapsed" class="font-medium">{{ t('nav.categoryManagement') }}</span>
         </router-link>
 
@@ -181,7 +230,14 @@ const navigateTo = (path: string) => {
             </div>
           </div>
           <div class="space-y-1">
-            <button class="w-full flex items-center gap-2 p-2 text-xs font-medium text-slate-500 hover:text-indigo-600 transition-colors">
+            <button 
+              @click="navigateTo('/settings')"
+              :class="[
+                'w-full flex items-center gap-2 p-2 text-xs font-medium transition-colors rounded-lg',
+                currentView === 'settings' ? 'text-indigo-600 bg-indigo-50' : 'text-slate-500 hover:text-indigo-600 hover:bg-slate-50'
+              ]"
+              :style="currentView === 'settings' ? { color: systemSettings.primary_color, backgroundColor: `color-mix(in srgb, ${systemSettings.primary_color} 10%, white)` } : {}"
+            >
               <Settings :size="14" />
               {{ t('nav.settings') }}
             </button>
@@ -197,6 +253,7 @@ const navigateTo = (path: string) => {
               v-else
               @click="navigateTo('/login')"
               class="w-full flex items-center gap-2 p-2 text-xs font-medium text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+              :style="{ color: systemSettings.primary_color, backgroundColor: `color-mix(in srgb, ${systemSettings.primary_color} 10%, white)` }"
             >
               <LogIn :size="14" />
               {{ t('common.login') || 'Login' }}
@@ -250,6 +307,7 @@ const navigateTo = (path: string) => {
             v-if="currentView === 'info-list'"
             @click="navigateTo('/article/new')"
             class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-sm shadow-indigo-200"
+            :style="{ backgroundColor: systemSettings.primary_color }"
           >
             <PlusCircle :size="18" />
             {{ t('common.publish') }}

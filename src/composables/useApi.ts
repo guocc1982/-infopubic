@@ -27,7 +27,8 @@ export function useApi() {
 
       return response;
     } catch (error) {
-      if (retries > 0 && (error instanceof Error && error.message === 'Failed to fetch')) {
+      console.error(`API Fetch Error [${options.method || 'GET'} ${url}]:`, error);
+      if (retries > 0 && (error instanceof Error && (error.message === 'Failed to fetch' || error.name === 'TypeError'))) {
         console.warn(`Fetch failed, retrying... (${retries} left)`);
         await new Promise(resolve => setTimeout(resolve, 1000));
         return apiFetch(url, options, retries - 1);

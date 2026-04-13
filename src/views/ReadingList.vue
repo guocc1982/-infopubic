@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, inject } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { 
@@ -14,6 +14,9 @@ import { useData } from '../composables/useData';
 const router = useRouter();
 const { t } = useI18n();
 const { categories, articles, isLoading, fetchData, getCategoryName, searchQuery } = useData();
+
+// Inject system settings from App.vue
+const systemSettings = inject('systemSettings', ref({ primary_color: '#4f46e5' }));
 
 const selectedCategoryId = ref<number | null>(null);
 
@@ -53,6 +56,7 @@ onMounted(() => fetchData(true));
             'px-4 py-2 rounded-full text-sm font-medium transition-all',
             !selectedCategoryId ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300'
           ]"
+          :style="!selectedCategoryId ? { backgroundColor: systemSettings.primary_color } : {}"
         >
           {{ t('common.all') }}
         </button>
@@ -64,6 +68,7 @@ onMounted(() => fetchData(true));
             'px-4 py-2 rounded-full text-sm font-medium transition-all',
             selectedCategoryId === cat.id ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300'
           ]"
+          :style="selectedCategoryId === cat.id ? { backgroundColor: systemSettings.primary_color } : {}"
         >
           {{ cat.name }}
         </button>
@@ -82,7 +87,7 @@ onMounted(() => fetchData(true));
 
     <div v-if="isLoading" class="flex items-center justify-center py-20">
       <div class="flex flex-col items-center gap-4">
-        <div class="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+        <div class="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" :style="{ borderColor: systemSettings.primary_color, borderTopColor: 'transparent' }"></div>
         <p class="text-slate-500 font-medium">{{ t('common.loading') }}</p>
       </div>
     </div>
@@ -100,7 +105,7 @@ onMounted(() => fetchData(true));
             referrerPolicy="no-referrer"
           />
           <div class="absolute top-4 left-4">
-            <span class="px-3 py-1 bg-white/90 backdrop-blur-sm text-indigo-600 text-xs font-bold rounded-full uppercase tracking-wider">
+            <span class="px-3 py-1 bg-white/90 backdrop-blur-sm text-indigo-600 text-xs font-bold rounded-full uppercase tracking-wider" :style="{ color: systemSettings.primary_color }">
               {{ article.category_name || getCategoryName(article.category_id) }}
             </span>
           </div>
@@ -110,13 +115,14 @@ onMounted(() => fetchData(true));
             <span class="flex items-center gap-1"><Clock :size="14" /> {{ article.publish_date }}</span>
             <span class="flex items-center gap-1"><Eye :size="14" /> {{ article.view_count }}</span>
           </div>
-          <h3 class="text-xl font-bold mb-3 group-hover:text-indigo-600 transition-colors line-clamp-2">{{ article.title }}</h3>
+          <h3 class="text-xl font-bold mb-3 group-hover:text-indigo-600 transition-colors line-clamp-2" :style="`--hover-color: ${systemSettings.primary_color}`">{{ article.title }}</h3>
           <p class="text-slate-500 text-sm mb-6 line-clamp-3 leading-relaxed">{{ article.summary }}</p>
           <div class="mt-auto flex items-center justify-between">
             <span class="text-xs font-medium text-slate-400">{{ article.reading_time }} {{ t('article.minutes') }} read</span>
             <button 
               @click="navigateToDetail(article.id!)"
               class="text-indigo-600 font-bold text-sm flex items-center gap-1 hover:gap-2 transition-all"
+              :style="{ color: systemSettings.primary_color }"
             >
               {{ t('common.readMore') }} <ChevronRight :size="16" />
             </button>

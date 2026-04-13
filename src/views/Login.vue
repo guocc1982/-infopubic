@@ -46,6 +46,7 @@
             type="submit"
             :disabled="loading"
             class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+            :style="{ backgroundColor: systemSettings.primary_color }"
           >
             <span v-if="loading">正在登录...</span>
             <span v-else>登录</span>
@@ -61,7 +62,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, inject } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuth } from '../composables/useAuth';
 
@@ -73,6 +74,9 @@ const loading = ref(false);
 const router = useRouter();
 const route = useRoute();
 const { login } = useAuth();
+
+// Inject system settings from App.vue
+const systemSettings = inject('systemSettings', ref({ primary_color: '#4f46e5' }));
 
 const handleLogin = async () => {
   loading.value = true;

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, inject } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { 
@@ -22,6 +22,9 @@ const router = useRouter();
 const { t } = useI18n();
 const { getCategoryName, fetchData, tenantId, currentArticleTitle } = useData();
 const { apiFetch } = useApi();
+
+// Inject system settings from App.vue
+const systemSettings = inject('systemSettings', ref({ primary_color: '#4f46e5' }));
 
 const viewingArticle = ref<Article | null>(null);
 const comments = ref<Comment[]>([]);
@@ -106,7 +109,7 @@ onMounted(async () => {
 <template>
   <div v-if="isLoading" class="flex items-center justify-center py-20">
     <div class="flex flex-col items-center gap-4">
-      <div class="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+      <div class="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" :style="{ borderColor: systemSettings.primary_color, borderTopColor: 'transparent' }"></div>
       <p class="text-slate-500 font-medium">{{ t('common.loading') }}</p>
     </div>
   </div>
@@ -120,7 +123,7 @@ onMounted(async () => {
       />
       <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end p-8">
         <div class="space-y-2">
-          <span class="px-3 py-1 bg-indigo-600 text-white text-xs font-bold rounded-full uppercase tracking-wider">
+          <span class="px-3 py-1 bg-indigo-600 text-white text-xs font-bold rounded-full uppercase tracking-wider" :style="{ backgroundColor: systemSettings.primary_color }">
             {{ viewingArticle.category_name || getCategoryName(viewingArticle.category_id) }}
           </span>
           <h2 class="text-3xl md:text-4xl font-bold text-white leading-tight">{{ viewingArticle.title || t('article.noTitle') }}</h2>
@@ -141,16 +144,16 @@ onMounted(async () => {
         <span class="flex items-center gap-1.5"><BookOpen :size="16" /> {{ viewingArticle.reading_time }} {{ t('article.minutes') }} {{ t('common.readMore') }}</span>
       </div>
       
-      <div v-if="viewingArticle.subtitle" class="text-xl font-medium text-slate-600 mb-8 italic border-l-4 border-indigo-500 pl-6">
+      <div v-if="viewingArticle.subtitle" class="text-xl font-medium text-slate-600 mb-8 italic border-l-4 border-indigo-50 pl-6" :style="{ borderLeftColor: systemSettings.primary_color }">
         {{ viewingArticle.subtitle }}
       </div>
       
-      <div class="prose prose-slate prose-indigo max-w-none prose-headings:font-bold prose-a:text-indigo-600" v-html="viewingArticle.content"></div>
+      <div class="prose prose-slate prose-indigo max-w-none prose-headings:font-bold prose-a:text-indigo-600" :style="`--tw-prose-links: ${systemSettings.primary_color}`" v-html="viewingArticle.content"></div>
       
       <!-- Comments Section -->
       <div class="mt-16 pt-12 border-t border-slate-100">
         <div class="flex items-center gap-3 mb-8">
-          <div class="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+          <div class="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600" :style="{ color: systemSettings.primary_color, backgroundColor: `color-mix(in srgb, ${systemSettings.primary_color} 10%, white)` }">
             <MessageSquare :size="20" />
           </div>
           <h3 class="text-2xl font-bold">{{ t('common.comments') }} ({{ comments.length }})</h3>
@@ -180,6 +183,7 @@ onMounted(async () => {
               <button 
                 @click="submitComment"
                 class="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
+                :style="{ backgroundColor: systemSettings.primary_color }"
               >
                 <Send :size="18" /> {{ t('common.submitComment') }}
               </button>

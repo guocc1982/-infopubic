@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, inject } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { 
   FolderTree, 
@@ -19,6 +19,10 @@ import CategorySelect from '../components/CategorySelect.vue';
 const { categories, fetchData, tenantId } = useData();
 const { apiFetch } = useApi();
 const { t } = useI18n();
+
+// Inject system settings from App.vue
+const systemSettings = inject('systemSettings', ref({ primary_color: '#4f46e5' }));
+
 const editingCategory = ref<Partial<Category> | null>(null);
 const searchQuery = ref('');
 
@@ -84,7 +88,7 @@ onMounted(fetchData);
       <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col h-[calc(100vh-12rem)]">
         <div class="flex items-center justify-between mb-4">
           <h3 class="font-bold text-lg">{{ t('common.categories') }}</h3>
-          <button @click="editingCategory = { name: '', parent_id: null, description: '', display_order: 0, is_published: true, icon: '' }" class="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors">
+          <button @click="editingCategory = { name: '', parent_id: null, description: '', display_order: 0, is_published: true, icon: '' }" class="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors" :style="{ color: systemSettings.primary_color, backgroundColor: `color-mix(in srgb, ${systemSettings.primary_color} 10%, white)` }">
             <PlusCircle :size="18" />
           </button>
         </div>
@@ -150,7 +154,7 @@ onMounted(fetchData);
           </div>
           <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-indigo-600">
+              <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-indigo-600" :style="{ color: systemSettings.primary_color }">
                 <CheckCircle2 :size="20" />
               </div>
               <div>
@@ -162,6 +166,7 @@ onMounted(fetchData);
               type="checkbox" 
               v-model="editingCategory.is_published"
               class="w-6 h-6 rounded-lg border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              :style="{ color: systemSettings.primary_color }"
             />
           </div>
           <div class="flex justify-end gap-3 pt-4">
@@ -175,6 +180,7 @@ onMounted(fetchData);
             <button 
               type="submit"
               class="px-8 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+              :style="{ backgroundColor: systemSettings.primary_color }"
             >
               {{ t('article.save') }}
             </button>

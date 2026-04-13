@@ -30,6 +30,7 @@
               :value="item"
               v-model="localSelected"
               class="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 transition-all"
+              :style="{ color: systemSettings.primary_color }"
             />
             <span class="text-sm font-medium text-slate-700 group-hover:text-slate-900">{{ item }}</span>
           </label>
@@ -47,6 +48,7 @@
           <button 
             @click="selectAll" 
             class="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 uppercase tracking-wider"
+            :style="{ color: systemSettings.primary_color }"
           >
             {{ t('common.selectAllFiltered') }}
           </button>
@@ -60,7 +62,7 @@
         </div>
         <div class="flex gap-3">
           <button @click="$emit('close')" class="px-6 py-2 text-sm font-bold text-slate-500 hover:text-slate-700 transition-colors">{{ t('common.cancel') }}</button>
-          <button @click="confirm" class="px-6 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all">{{ t('common.confirm') }}</button>
+          <button @click="confirm" class="px-6 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all" :style="{ backgroundColor: systemSettings.primary_color }">{{ t('common.confirm') }}</button>
         </div>
       </div>
     </div>
@@ -68,7 +70,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, inject } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { X, Search } from 'lucide-vue-next';
 
@@ -82,6 +84,10 @@ const props = defineProps<{
 const emit = defineEmits(['close', 'confirm']);
 
 const { t } = useI18n();
+
+// Inject system settings from App.vue
+const systemSettings = inject('systemSettings', ref({ primary_color: '#4f46e5' }));
+
 const searchQuery = ref('');
 const localSelected = ref<string[]>([]);
 

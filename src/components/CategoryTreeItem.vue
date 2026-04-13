@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, inject } from 'vue';
 import { ChevronRight, ChevronDown, FolderTree, Trash2, Search } from 'lucide-vue-next';
 import type { Category } from '../types';
 
@@ -15,6 +15,9 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits(['select', 'delete']);
+
+// Inject system settings from App.vue
+const systemSettings = inject('systemSettings', ref({ primary_color: '#4f46e5' }));
 
 const isExpanded = ref(true);
 
@@ -58,7 +61,10 @@ const toggleExpand = (e: Event) => {
         'flex items-center justify-between p-2 rounded-xl cursor-pointer transition-all group relative',
         selectedId === item.id ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-slate-50'
       ]"
-      :style="{ paddingLeft: `${depth * 1.25 + 0.75}rem` }"
+      :style="[
+        { paddingLeft: `${depth * 1.25 + 0.75}rem` },
+        selectedId === item.id ? { color: systemSettings.primary_color, backgroundColor: `color-mix(in srgb, ${systemSettings.primary_color} 10%, white)` } : {}
+      ]"
     >
       <div class="flex items-center gap-2 overflow-hidden">
         <button 
@@ -71,10 +77,11 @@ const toggleExpand = (e: Event) => {
         </button>
         <div v-else class="w-5"></div>
         
-        <FolderTree :size="16" :class="selectedId === item.id ? 'text-indigo-600' : 'text-slate-400'" class="shrink-0" />
+        <FolderTree :size="16" :class="selectedId === item.id ? 'text-indigo-600' : 'text-slate-400'" class="shrink-0" :style="selectedId === item.id ? { color: systemSettings.primary_color } : {}" />
         <span 
           class="text-sm font-medium truncate"
           :class="{ 'text-indigo-600 font-bold': searchQuery && isMatch }"
+          :style="searchQuery && isMatch ? { color: systemSettings.primary_color } : {}"
         >
           {{ item.name }}
         </span>

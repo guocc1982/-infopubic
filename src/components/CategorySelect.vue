@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, inject } from 'vue';
 import { Search, ChevronDown, FolderTree, Check } from 'lucide-vue-next';
 import type { Category } from '../types';
 import RecursiveCategoryItem from './RecursiveCategoryItem.vue';
@@ -15,6 +15,9 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits(['update:modelValue']);
+
+// Inject system settings from App.vue
+const systemSettings = inject('systemSettings', ref({ primary_color: '#4f46e5' }));
 
 const isOpen = ref(false);
 const searchQuery = ref('');
@@ -90,6 +93,7 @@ const filteredTree = computed(() => {
     <div 
       @click="isOpen = !isOpen"
       class="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm flex items-center justify-between cursor-pointer hover:border-indigo-300 transition-all shadow-sm"
+      :style="isOpen ? { borderColor: systemSettings.primary_color } : {}"
     >
       <div class="flex items-center gap-2 overflow-hidden">
         <FolderTree :size="16" class="text-slate-400 shrink-0" />
@@ -123,12 +127,13 @@ const filteredTree = computed(() => {
           @click="selectCategory(null as any)"
           class="flex items-center justify-between px-2 py-1.5 rounded-lg cursor-pointer transition-colors mb-1"
           :class="modelValue === null ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-slate-50 text-slate-600'"
+          :style="modelValue === null ? { color: systemSettings.primary_color, backgroundColor: `color-mix(in srgb, ${systemSettings.primary_color} 10%, white)` } : {}"
         >
           <div class="flex items-center gap-2">
             <div class="w-4"></div>
             <span class="text-xs font-medium">{{ placeholder || 'None' }}</span>
           </div>
-          <Check v-if="modelValue === null" :size="12" class="text-indigo-600" />
+          <Check v-if="modelValue === null" :size="12" class="text-indigo-600" :style="{ color: systemSettings.primary_color }" />
         </div>
 
         <div v-if="filteredTree.length === 0 && searchQuery" class="p-8 text-center text-slate-400 text-xs italic">

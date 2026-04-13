@@ -1,1 +1,47 @@
 @import "tailwindcss";
+
+:root {
+  --primary-color: #4f46e5;
+  --primary-color-rgb: 79, 70, 229;
+}
+
+/* Global overrides for indigo classes to support dynamic primary color */
+.bg-indigo-600, .bg-indigo-500 {
+  background-color: var(--primary-color) !important;
+}
+
+.text-indigo-600, .text-indigo-500 {
+  color: var(--primary-color) !important;
+}
+
+.border-indigo-600, .border-indigo-500, .border-indigo-300 {
+  border-color: var(--primary-color) !important;
+}
+
+.bg-indigo-50 {
+  background-color: color-mix(in srgb, var(--primary-color) 10%, white) !important;
+}
+
+.bg-indigo-100 {
+  background-color: color-mix(in srgb, var(--primary-color) 20%, white) !important;
+}
+
+.hover\:bg-indigo-700:hover, .hover\:bg-indigo-600:hover {
+  filter: brightness(0.9);
+}
+
+.focus\:ring-indigo-500:focus, .focus\:ring-indigo-600:focus {
+  --tw-ring-color: color-mix(in srgb, var(--primary-color) 40%, transparent) !important;
+}
+
+.focus\:border-indigo-500:focus, .focus\:border-indigo-600:focus {
+  border-color: var(--primary-color) !important;
+}
+
+.group:hover .group-hover\:text-indigo-600, .group:hover .group-hover\:text-indigo-500 {
+  color: var(--primary-color) !important;
+}
+
+.shadow-indigo-100, .shadow-indigo-200 {
+  --tw-shadow-color: color-mix(in srgb, var(--primary-color) 20%, transparent) !important;
+}

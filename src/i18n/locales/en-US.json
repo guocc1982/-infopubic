@@ -3,7 +3,8 @@
     "readingList": "Reading List",
     "contentManagement": "Content Management",
     "categoryManagement": "Category Management",
-    "settings": "Settings"
+    "settings": "Settings",
+    "settingsDesc": "Configure your system preferences and global settings"
   },
   "common": {
     "save": "Save",
@@ -79,7 +80,60 @@
     "noMatchingImages": "No matching images found",
     "logout": "Logout",
     "login": "Login",
-    "guest": "Guest"
+    "guest": "Guest",
+    "saveSuccess": "Settings saved successfully"
+  },
+  "settings": {
+    "tabs": {
+      "profile": "Profile",
+      "general": "General",
+      "security": "Security",
+      "appearance": "Appearance",
+      "notifications": "Notifications",
+      "advanced": "Advanced"
+    },
+    "profile": {
+      "saveSuccess": "Profile updated successfully",
+      "passwordMismatch": "Passwords do not match",
+      "username": "Username",
+      "displayName": "Display Name",
+      "newPassword": "New Password",
+      "confirmPassword": "Confirm Password",
+      "immutable": "Immutable",
+      "passwordPlaceholder": "Leave blank to keep current"
+    },
+    "general": {
+      "siteName": "Site Name",
+      "siteDescription": "Site Description",
+      "language": "Language",
+      "timezone": "Timezone",
+      "beijing": "Beijing",
+      "london": "London",
+      "newYork": "New York"
+    },
+    "security": {
+      "allowRegistration": "Allow User Registration",
+      "allowRegistrationDesc": "Enable or disable new user signups",
+      "commentApproval": "Comment Approval",
+      "commentApprovalDesc": "Require manual approval for all comments"
+    },
+    "appearance": {
+      "theme": "System Theme",
+      "primaryColor": "Primary Color",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "notifications": {
+      "email": "Email Notifications",
+      "emailDesc": "Receive system updates via email",
+      "push": "Push Notifications",
+      "pushDesc": "Receive browser push notifications"
+    },
+    "advanced": {
+      "title": "Advanced Configuration",
+      "desc": "Database maintenance and advanced system parameters will be available here."
+    }
   },
   "article": {
     "title": "Title",

@@ -37,6 +37,7 @@
             <button 
               @click="triggerUpload"
               class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all"
+              :style="{ backgroundColor: systemSettings.primary_color }"
             >
               <Upload :size="16" />
               {{ t('common.localUpload') }}
@@ -62,10 +63,11 @@
                 'relative aspect-video rounded-2xl overflow-hidden cursor-pointer border-4 transition-all group',
                 selectedUrl === img.url ? 'border-indigo-600 shadow-xl scale-[0.98]' : 'border-transparent hover:border-indigo-200'
               ]"
+              :style="selectedUrl === img.url ? { borderColor: systemSettings.primary_color } : {}"
             >
               <img :src="img.url" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" referrerPolicy="no-referrer" />
-              <div v-if="selectedUrl === img.url" class="absolute inset-0 bg-indigo-600/20 flex items-center justify-center">
-                <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-lg">
+              <div v-if="selectedUrl === img.url" class="absolute inset-0 bg-indigo-600/20 flex items-center justify-center" :style="{ backgroundColor: `color-mix(in srgb, ${systemSettings.primary_color} 20%, transparent)` }">
+                <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-lg" :style="{ backgroundColor: systemSettings.primary_color }">
                   <Check :size="18" />
                 </div>
               </div>
@@ -95,6 +97,7 @@
               @click="confirm" 
               :disabled="!selectedUrl"
               class="px-8 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              :style="!selectedUrl ? {} : { backgroundColor: systemSettings.primary_color }"
             >
               {{ t('common.confirmSelection') }}
             </button>
@@ -106,7 +109,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, inject } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { X, Search, Upload, Check } from 'lucide-vue-next';
 
@@ -118,6 +121,10 @@ const props = defineProps<{
 const emit = defineEmits(['close', 'confirm']);
 
 const { t } = useI18n();
+
+// Inject system settings from App.vue
+const systemSettings = inject('systemSettings', ref({ primary_color: '#4f46e5' }));
+
 const searchQuery = ref('');
 const selectedUrl = ref('');
 const fileInput = ref<HTMLInputElement | null>(null);

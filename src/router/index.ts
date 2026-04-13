@@ -4,6 +4,7 @@ import ContentManagement from '../views/ContentManagement.vue';
 import CategoryManagement from '../views/CategoryManagement.vue';
 import ArticleEditor from '../views/ArticleEditor.vue';
 import ArticleDetail from '../views/ArticleDetail.vue';
+import Settings from '../views/Settings.vue';
 import Login from '../views/Login.vue';
 import { useAuth } from '../composables/useAuth';
 
@@ -32,6 +33,12 @@ const routes: RouteRecordRaw[] = [
     path: '/category-management',
     name: 'category-mgmt',
     component: CategoryManagement,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/settings',
+    name: 'settings',
+    component: Settings,
     meta: { requiresAuth: true }
   },
   {

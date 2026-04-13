@@ -39,12 +39,18 @@ export function useAuth() {
     localStorage.removeItem('auth_user');
   };
 
+  const updateUser = (newUser: User) => {
+    user.value = newUser;
+    localStorage.setItem('auth_user', JSON.stringify(newUser));
+  };
+
   return {
     user,
     token,
     isAuthenticated,
     isAdmin,
     login,
-    logout
+    logout,
+    updateUser
   };
 }

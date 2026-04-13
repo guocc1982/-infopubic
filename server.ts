@@ -7,6 +7,8 @@ import { createProxyMiddleware } from 'http-proxy-middleware';
 import { ServerResponse } from 'http';
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import swaggerJsdoc from "swagger-jsdoc";
+import swaggerUi from "swagger-ui-express";
 
 const JWT_SECRET = process.env.JWT_SECRET || "default_secret_key";
 
@@ -136,6 +138,25 @@ function initDb() {
     db.exec("ALTER TABLE articles ADD COLUMN is_pinned INTEGER DEFAULT 0");
   }
 
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS settings (
+      tenant_id TEXT PRIMARY KEY,
+      site_name TEXT DEFAULT 'AI Studio App',
+      site_description TEXT DEFAULT 'A polished AI-powered application',
+      language TEXT DEFAULT 'zh-CN',
+      theme TEXT DEFAULT 'light',
+      primary_color TEXT DEFAULT '#4f46e5',
+      email_notifications INTEGER DEFAULT 1,
+      push_notifications INTEGER DEFAULT 1
+    )
+  `);
+
+  // Seed default settings if not exists
+  const settingsCount = db.prepare("SELECT COUNT(*) as count FROM settings WHERE tenant_id = 'default'").get() as any;
+  if (settingsCount.count === 0) {
+    db.prepare("INSERT INTO settings (tenant_id) VALUES ('default')").run();
+  }
+
   // Seed data if empty
   const roleCount = db.prepare("SELECT COUNT(*) as count FROM roles").get() as any;
   if (roleCount.count === 0) {
@@ -234,7 +255,66 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(tenantMiddleware);
 
+// Swagger Definition
+const swaggerOptions = {
+  definition: {
+    openapi: "3.0.0",
+    info: {
+      title: "AI Studio App API",
+      version: "1.0.0",
+      description: "API documentation for the AI Studio application",
+    },
+    servers: [
+      {
+        url: "http://localhost:3000",
+      },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
+    },
+    security: [
+      {
+        bearerAuth: [],
+      },
+    ],
+  },
+  apis: ["./server.ts"], // Path to the API docs
+};
+
+const swaggerDocs = swaggerJsdoc(swaggerOptions);
+app.use("/swagger-ui", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+app.get("/swagger-ui.html", (req, res) => res.redirect("/swagger-ui"));
+
 // Auth Routes
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: User login
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *       401:
+ *         description: Unauthorized
+ */
 app.post("/api/auth/login", (req, res) => {
   const { username, password } = req.body;
   const tenantId = req.header('X-Tenant-ID') || 'default';
@@ -273,7 +353,122 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", database: !!db, javaBackend: !!process.env.JAVA_BACKEND_URL });
 });
 
+/**
+ * @swagger
+ * /api/settings:
+ *   get:
+ *     summary: Get system settings
+ *     tags: [Settings]
+ *     responses:
+ *       200:
+ *         description: System settings retrieved
+ */
+app.get("/api/settings", (req, res) => {
+  const tenantId = (req as any).tenantId;
+  let settings = db.prepare("SELECT * FROM settings WHERE tenant_id = ?").get(tenantId) as any;
+  
+  if (!settings) {
+    // Return default settings if none found for this tenant
+    settings = {
+      tenant_id: tenantId,
+      site_name: 'AI Studio App',
+      site_description: 'A polished AI-powered application',
+      language: 'zh-CN',
+      theme: 'light',
+      primary_color: '#4f46e5',
+      email_notifications: 1,
+      push_notifications: 1
+    };
+  }
+  
+  // Convert 1/0 to boolean
+  res.json({
+    ...settings,
+    email_notifications: !!settings.email_notifications,
+    push_notifications: !!settings.push_notifications
+  });
+});
+
+/**
+ * @swagger
+ * /api/settings:
+ *   post:
+ *     summary: Save system settings
+ *     tags: [Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Settings saved
+ */
+app.post("/api/settings", authMiddleware, (req, res) => {
+  console.log(`Saving settings for tenant: ${(req as any).tenantId}`);
+  
+  try {
+    const { 
+      site_name, 
+      site_description, 
+      language, 
+      theme, 
+      primary_color, 
+      email_notifications, 
+      push_notifications 
+    } = req.body || {};
+
+    if (!req.body) {
+      return res.status(400).json({ error: "Missing request body" });
+    }
+
+    const tenantId = (req as any).tenantId;
+
+    db.prepare(`
+      INSERT INTO settings (
+        tenant_id, site_name, site_description, language, theme, primary_color, email_notifications, push_notifications
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(tenant_id) DO UPDATE SET
+        site_name = excluded.site_name,
+        site_description = excluded.site_description,
+        language = excluded.language,
+        theme = excluded.theme,
+        primary_color = excluded.primary_color,
+        email_notifications = excluded.email_notifications,
+        push_notifications = excluded.push_notifications
+    `).run(
+      tenantId, 
+      site_name || 'Hub CMS', 
+      site_description || '', 
+      language || 'zh-CN', 
+      theme || 'light', 
+      primary_color || '#4f46e5', 
+      email_notifications ? 1 : 0, 
+      push_notifications ? 1 : 0
+    );
+    
+    console.log(`Settings saved successfully for tenant: ${tenantId}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error saving settings:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
 // Local API Routes (Take precedence)
+/**
+ * @swagger
+ * /api/categories:
+ *   get:
+ *     summary: Get all categories
+ *     tags: [Categories]
+ *     responses:
+ *       200:
+ *         description: List of categories
+ */
 app.get("/api/categories", (req, res) => {
   const categories = db.prepare("SELECT * FROM categories WHERE tenant_id = ? ORDER BY display_order ASC").all((req as any).tenantId);
   res.json(categories);
@@ -320,6 +515,16 @@ app.delete("/api/categories/:id", authMiddleware, (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/articles:
+ *   get:
+ *     summary: Get all articles
+ *     tags: [Articles]
+ *     responses:
+ *       200:
+ *         description: List of articles
+ */
 app.get("/api/articles", (req, res) => {
   const articles = db.prepare(`
     SELECT a.*, c.name as category_name 
@@ -433,6 +638,55 @@ app.get("/api/roles", (req, res) => {
 app.get("/api/users", (req, res) => {
   const users = db.prepare("SELECT * FROM users WHERE tenant_id = ?").all((req as any).tenantId);
   res.json(users);
+});
+
+/**
+ * @swagger
+ * /api/users/me:
+ *   put:
+ *     summary: Update current user profile
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               display_name:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Profile updated
+ *       401:
+ *         description: Unauthorized
+ */
+app.put("/api/users/me", authMiddleware, (req, res) => {
+  const { display_name, password } = req.body;
+  const userId = (req as any).user.id;
+  const tenantId = (req as any).tenantId;
+
+  try {
+    if (password) {
+      const salt = bcrypt.genSaltSync(10);
+      const hashedPassword = bcrypt.hashSync(password, salt);
+      db.prepare("UPDATE users SET display_name = ?, password = ? WHERE id = ? AND tenant_id = ?")
+        .run(display_name, hashedPassword, userId, tenantId);
+    } else {
+      db.prepare("UPDATE users SET display_name = ? WHERE id = ? AND tenant_id = ?")
+        .run(display_name, userId, tenantId);
+    }
+    
+    const updatedUser = db.prepare("SELECT id, username, display_name, role FROM users WHERE id = ?").get(userId) as any;
+    res.json({ success: true, user: updatedUser });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
 });
 
 // API Proxy to Java Backend (Fallback for non-local routes)

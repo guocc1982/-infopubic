@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, inject } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { 
@@ -29,6 +29,9 @@ const router = useRouter();
 const { t } = useI18n();
 const { categories, articles, isLoading, fetchData, getCategoryName, searchQuery, tenantId } = useData();
 const { apiFetch } = useApi();
+
+// Inject system settings from App.vue
+const systemSettings = inject('systemSettings', ref({ primary_color: '#4f46e5' }));
 
 const selectedCategoryId = ref<number | null>(null);
 const selectedStatus = ref<'all' | 'published' | 'draft' | 'archived' | 'pending'>('all');
@@ -318,6 +321,7 @@ onMounted(() => {
               'px-4 md:px-6 py-2 rounded-lg text-sm font-bold transition-all capitalize whitespace-nowrap',
               selectedStatus === status ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100' : 'text-slate-500 hover:text-slate-900'
             ]"
+            :style="selectedStatus === status ? { backgroundColor: systemSettings.primary_color } : {}"
           >
             {{ status === 'all' ? t('common.all') : status === 'published' ? t('article.published') : status === 'draft' ? t('article.draft') : status === 'archived' ? t('article.archived') : t('article.pending') }}
           </button>
@@ -325,13 +329,13 @@ onMounted(() => {
 
         <!-- Bulk Actions -->
         <transition enter-active-class="transition duration-200 ease-out" enter-from-class="transform scale-95 opacity-0" enter-to-class="transform scale-100 opacity-100" leave-active-class="transition duration-150 ease-in" leave-from-class="transform scale-100 opacity-100" leave-to-class="transform scale-95 opacity-0">
-          <div v-if="selectedArticleIds.length > 0" class="flex items-center gap-2 bg-indigo-50 border border-indigo-100 px-4 py-1.5 rounded-xl">
-            <span class="text-xs font-bold text-indigo-600">{{ t('common.selected') }} {{ selectedArticleIds.length }} {{ t('common.items') }}</span>
-            <div class="w-[1px] h-4 bg-indigo-200 mx-1"></div>
+          <div v-if="selectedArticleIds.length > 0" class="flex items-center gap-2 bg-indigo-50 border border-indigo-100 px-4 py-1.5 rounded-xl" :style="{ backgroundColor: `color-mix(in srgb, ${systemSettings.primary_color} 10%, white)`, borderColor: `color-mix(in srgb, ${systemSettings.primary_color} 20%, white)` }">
+            <span class="text-xs font-bold text-indigo-600" :style="{ color: systemSettings.primary_color }">{{ t('common.selected') }} {{ selectedArticleIds.length }} {{ t('common.items') }}</span>
+            <div class="w-[1px] h-4 bg-indigo-200 mx-1" :style="{ backgroundColor: `color-mix(in srgb, ${systemSettings.primary_color} 30%, white)` }"></div>
             <button @click="bulkDelete" class="text-xs font-bold text-rose-600 hover:text-rose-700 transition-colors flex items-center gap-1">
               <Trash2 :size="14" /> {{ t('common.bulkDelete') }}
             </button>
-            <button @click="openBulkEdit" class="text-xs font-bold text-indigo-600 hover:text-indigo-700 transition-colors flex items-center gap-1">
+            <button @click="openBulkEdit" class="text-xs font-bold text-indigo-600 hover:text-indigo-700 transition-colors flex items-center gap-1" :style="{ color: systemSettings.primary_color }">
               <Edit2 :size="14" /> {{ t('common.bulkEdit') }}
             </button>
           </div>
@@ -345,6 +349,7 @@ onMounted(() => {
             'flex items-center gap-2 px-4 py-2 border rounded-xl text-sm font-medium shadow-sm transition-all cursor-pointer',
             isAdvancedFilterOpen ? 'bg-indigo-50 border-indigo-300 text-indigo-600' : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-300'
           ]"
+          :style="isAdvancedFilterOpen ? { color: systemSettings.primary_color, borderColor: systemSettings.primary_color, backgroundColor: `color-mix(in srgb, ${systemSettings.primary_color} 10%, white)` } : {}"
         >
           <Filter :size="16" />
           {{ t('common.advancedFilter') }}
@@ -594,6 +599,9 @@ onMounted(() => {
           <button class="p-2 border border-slate-200 rounded-lg text-slate-400 hover:bg-white transition-all disabled:opacity-50" disabled>
             <ChevronLeft :size="16" />
           </button>
+          <button class="p-2 border border-slate-200 rounded-lg text-white transition-all shadow-sm" :style="{ backgroundColor: systemSettings.primary_color }">
+            1
+          </button>
           <button class="p-2 border border-slate-200 rounded-lg text-slate-400 hover:bg-white transition-all disabled:opacity-50" disabled>
             <ChevronRight :size="16" />
           </button>
@@ -636,7 +644,7 @@ onMounted(() => {
         </div>
         <div class="p-6 bg-slate-50 flex justify-end gap-3">
           <button @click="isBulkEditModalOpen = false" class="px-6 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-all">{{ t('common.cancel') }}</button>
-          <button @click="performBulkEdit" class="px-8 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">{{ t('common.confirm') }}</button>
+          <button @click="performBulkEdit" class="px-8 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100" :style="{ backgroundColor: systemSettings.primary_color }">{{ t('common.confirm') }}</button>
         </div>
       </div>
     </div>

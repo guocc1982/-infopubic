@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, computed, watch, inject } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { 
@@ -28,6 +28,9 @@ const { t } = useI18n();
 const { categories, fetchData, tenantId } = useData();
 const { apiFetch } = useApi();
 const { user } = useAuth();
+
+// Inject system settings from App.vue
+const systemSettings = inject('systemSettings', ref({ primary_color: '#4f46e5' }));
 
 const editingArticle = ref<Partial<Article>>({
   title: '',
@@ -235,6 +238,7 @@ onMounted(async () => {
         <button 
           @click="isPreviewMode = !isPreviewMode"
           class="flex items-center gap-2 px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 rounded-xl transition-all"
+          :style="isPreviewMode ? { color: systemSettings.primary_color } : {}"
         >
           <Eye :size="18" />
           {{ isPreviewMode ? 'Exit Preview' : 'Preview' }}
@@ -249,11 +253,12 @@ onMounted(async () => {
           <button 
             @click="saveArticle('published')"
             class="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-l-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+            :style="{ backgroundColor: systemSettings.primary_color }"
           >
             <Save :size="18" />
             {{ t('common.publish') }}
           </button>
-          <button class="px-2 py-2 bg-indigo-600 text-white rounded-r-xl border-l border-indigo-500 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
+          <button class="px-2 py-2 bg-indigo-600 text-white rounded-r-xl border-l border-indigo-500 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100" :style="{ backgroundColor: systemSettings.primary_color, borderLeftColor: `color-mix(in srgb, ${systemSettings.primary_color} 80%, black)` }">
             <ChevronDown :size="18" />
           </button>
         </div>
@@ -451,6 +456,7 @@ onMounted(async () => {
                   type="checkbox" 
                   v-model="editingArticle.allow_all_registered"
                   class="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  :style="{ color: systemSettings.primary_color }"
                 />
               </div>
 
@@ -461,10 +467,10 @@ onMounted(async () => {
                       <Users :size="14" class="text-slate-400" />
                       {{ t('article.specifiedRoles') }}
                     </label>
-                    <button @click="isRoleModalOpen = true" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 uppercase tracking-wider">{{ t('article.selectRoles') }}</button>
+                    <button @click="isRoleModalOpen = true" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 uppercase tracking-wider" :style="{ color: systemSettings.primary_color }">{{ t('article.selectRoles') }}</button>
                   </div>
                   <div class="flex flex-wrap gap-1.5 p-3 bg-white border border-slate-200 rounded-xl min-h-[44px]">
-                    <span v-for="role in editingArticle.allowed_roles?.split(',').filter(r => r)" :key="role" class="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[10px] font-bold rounded-lg border border-indigo-100">
+                    <span v-for="role in editingArticle.allowed_roles?.split(',').filter(r => r)" :key="role" class="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[10px] font-bold rounded-lg border border-indigo-100" :style="{ color: systemSettings.primary_color, backgroundColor: `color-mix(in srgb, ${systemSettings.primary_color} 10%, white)`, borderColor: `color-mix(in srgb, ${systemSettings.primary_color} 20%, white)` }">
                       {{ role }}
                     </span>
                     <span v-if="!editingArticle.allowed_roles" class="text-[10px] text-slate-300 italic">None</span>
@@ -477,7 +483,7 @@ onMounted(async () => {
                       <Users :size="14" class="text-slate-400" />
                       {{ t('article.specifiedUsers') }}
                     </label>
-                    <button @click="isUserModalOpen = true" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 uppercase tracking-wider">{{ t('article.selectUsers') }}</button>
+                    <button @click="isUserModalOpen = true" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 uppercase tracking-wider" :style="{ color: systemSettings.primary_color }">{{ t('article.selectUsers') }}</button>
                   </div>
                   <div class="flex flex-wrap gap-1.5 p-3 bg-white border border-slate-200 rounded-xl min-h-[44px]">
                     <span v-for="user in editingArticle.allowed_users?.split(',').filter(u => u)" :key="user" class="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-bold rounded-lg border border-emerald-100">
