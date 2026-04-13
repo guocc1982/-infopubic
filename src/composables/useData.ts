@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import type { Category, Article } from '../types';
+import { useApi } from './useApi';
 
 const categories = ref<Category[]>([]);
 const articles = ref<Article[]>([]);
@@ -9,6 +10,8 @@ const tenantId = ref(localStorage.getItem('tenantId') || 'default');
 const searchQuery = ref('');
 
 export function useData() {
+  const { apiFetch } = useApi();
+
   const setTenantId = (id: string) => {
     tenantId.value = id;
     localStorage.setItem('tenantId', id);
@@ -21,38 +24,23 @@ export function useData() {
     isLoading.value = true;
     try {
       console.log('Fetching data from API for tenant:', tenantId.value, { force });
-      const headers = {
-        'X-Tenant-ID': tenantId.value
-      };
-
-      // Add a timeout to fetch calls
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
       const [catsRes, artsRes] = await Promise.all([
-        fetch('/api/categories', { headers, signal: controller.signal }),
-        fetch('/api/articles', { headers, signal: controller.signal })
+        apiFetch('/api/categories').catch(err => ({ ok: false, status: 0, statusText: err.message })),
+        apiFetch('/api/articles').catch(err => ({ ok: false, status: 0, statusText: err.message }))
       ]);
       
-      clearTimeout(timeoutId);
-      
-      if (!catsRes.ok || !artsRes.ok) {
-        const catsError = !catsRes.ok ? `Categories: ${catsRes.status} ${catsRes.statusText}` : '';
-        const artsError = !artsRes.ok ? `Articles: ${artsRes.status} ${artsRes.statusText}` : '';
-        throw new Error(`API error: ${catsError} ${artsError}`.trim());
-      }
+      if (!catsRes.ok) console.error('Failed to fetch categories:', catsRes.statusText);
+      if (!artsRes.ok) console.error('Failed to fetch articles:', artsRes.statusText);
 
-      const catsData = await catsRes.json();
-      const artsData = await artsRes.json();
+      if (catsRes.ok) categories.value = await (catsRes as Response).json();
+      if (artsRes.ok) articles.value = await (artsRes as Response).json();
       
-      console.log('Data fetched successfully:', { 
-        categoriesCount: catsData.length, 
-        articlesCount: artsData.length 
-      });
-      
-      categories.value = catsData;
-      articles.value = artsData;
-      isInitialized.value = true;
+      if (catsRes.ok || artsRes.ok) {
+        isInitialized.value = true;
+      } else {
+        throw new Error('Failed to fetch both categories and articles');
+      }
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {

@@ -11,11 +11,13 @@ import {
   ChevronRight
 } from 'lucide-vue-next';
 import { useData } from '../composables/useData';
+import { useApi } from '../composables/useApi';
 import type { Category } from '../types';
 import CategoryTreeItem from '../components/CategoryTreeItem.vue';
 import CategorySelect from '../components/CategorySelect.vue';
 
 const { categories, fetchData, tenantId } = useData();
+const { apiFetch } = useApi();
 const { t } = useI18n();
 const editingCategory = ref<Partial<Category> | null>(null);
 const searchQuery = ref('');
@@ -43,49 +45,33 @@ const saveCategory = async (category: Partial<Category>) => {
   const method = category.id ? 'PUT' : 'POST';
   const url = category.id ? `/api/categories/${category.id}` : '/api/categories';
   
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
-
   try {
-    const res = await fetch(url, {
+    const res = await apiFetch(url, {
       method,
       headers: { 
-        'Content-Type': 'application/json',
-        'X-Tenant-ID': tenantId.value
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(category),
-      signal: controller.signal
+      body: JSON.stringify(category)
     });
-    clearTimeout(timeoutId);
     if (res.ok) {
       await fetchData();
       editingCategory.value = null;
     }
   } catch (error) {
     console.error('Failed to save category:', error);
-  } finally {
-    clearTimeout(timeoutId);
   }
 };
 
 const deleteCategory = async (id: number) => {
   if (!confirm(t('common.deleteCategoryConfirm'))) return;
   
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
-
   try {
-    const res = await fetch(`/api/categories/${id}`, { 
-      method: 'DELETE',
-      headers: { 'X-Tenant-ID': tenantId.value },
-      signal: controller.signal
+    const res = await apiFetch(`/api/categories/${id}`, { 
+      method: 'DELETE'
     });
-    clearTimeout(timeoutId);
     if (res.ok) await fetchData();
   } catch (error) {
     console.error('Failed to delete category:', error);
-  } finally {
-    clearTimeout(timeoutId);
   }
 };
 

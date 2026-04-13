@@ -5,6 +5,10 @@ import { fileURLToPath } from "url";
 import Database from "better-sqlite3";
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import { ServerResponse } from 'http';
+import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+
+const JWT_SECRET = process.env.JWT_SECRET || "default_secret_key";
 
 console.log("Starting server...");
 
@@ -101,11 +105,16 @@ function initDb() {
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       tenant_id TEXT NOT NULL DEFAULT 'default',
-      username TEXT NOT NULL,
-      display_name TEXT
+      username TEXT NOT NULL UNIQUE,
+      password TEXT NOT NULL,
+      display_name TEXT,
+      role TEXT DEFAULT 'user'
     )
   `);
   try { db.exec("ALTER TABLE users ADD COLUMN tenant_id TEXT NOT NULL DEFAULT 'default'"); } catch(e) {}
+  try { db.exec("ALTER TABLE users ADD COLUMN password TEXT"); } catch(e) {}
+  try { db.exec("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'"); } catch(e) {}
+  try { db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username)"); } catch(e) {}
 
   // Add missing columns if they don't exist
   const tableInfo = db.prepare("PRAGMA table_info(articles)").all() as any[];
@@ -138,17 +147,20 @@ function initDb() {
 
   const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get() as any;
   if (userCount.count === 0) {
+    const salt = bcrypt.genSaltSync(10);
+    const defaultPassword = bcrypt.hashSync("password123", salt);
+    
     const users = [
-      ["admin", "系统管理员"],
-      ["sarah_j", "Sarah J."],
-      ["hr_admin", "HR Admin"],
-      ["zhang_g", "张工"],
-      ["finance_user", "财务专员"],
-      ["marketing_user", "市场专员"],
-      ["wang_x", "小王"]
+      ["admin", defaultPassword, "系统管理员", "admin"],
+      ["sarah_j", defaultPassword, "Sarah J.", "editor"],
+      ["hr_admin", defaultPassword, "HR Admin", "hr"],
+      ["zhang_g", defaultPassword, "张工", "tech"],
+      ["finance_user", defaultPassword, "财务专员", "finance"],
+      ["marketing_user", defaultPassword, "市场专员", "marketing"],
+      ["wang_x", defaultPassword, "小王", "user"]
     ];
-    const insert = db.prepare("INSERT INTO users (username, display_name) VALUES (?, ?)");
-    users.forEach(user => insert.run(user));
+    const insert = db.prepare("INSERT INTO users (username, password, display_name, role) VALUES (?, ?, ?, ?)");
+    users.forEach(user => insert.run(...user));
     console.log("Users seeded");
   }
 
@@ -193,16 +205,73 @@ function initDb() {
   }
 }
 
-initDb();
+// Auth Middleware
+const authMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
 
+  const token = authHeader.split(" ")[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    (req as any).user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: "Invalid token" });
+  }
+};
+
+initDb();
 const app = express();
 
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", database: !!db, javaBackend: !!process.env.JAVA_BACKEND_URL });
+// Request Logger
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
 });
 
 app.use(express.json());
 app.use(tenantMiddleware);
+
+// Auth Routes
+app.post("/api/auth/login", (req, res) => {
+  const { username, password } = req.body;
+  const tenantId = req.header('X-Tenant-ID') || 'default';
+
+  try {
+    const user = db.prepare("SELECT * FROM users WHERE username = ? AND tenant_id = ?").get(username, tenantId) as any;
+    if (!user || !bcrypt.compareSync(password, user.password)) {
+      return res.status(401).json({ error: "Invalid username or password" });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, username: user.username, role: user.role, tenantId: user.tenant_id },
+      JWT_SECRET,
+      { expiresIn: "24h" }
+    );
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        display_name: user.display_name,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+app.get("/api/auth/me", authMiddleware, (req, res) => {
+  res.json({ user: (req as any).user });
+});
+
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", database: !!db, javaBackend: !!process.env.JAVA_BACKEND_URL });
+});
 
 // Local API Routes (Take precedence)
 app.get("/api/categories", (req, res) => {
@@ -210,7 +279,7 @@ app.get("/api/categories", (req, res) => {
   res.json(categories);
 });
 
-app.post("/api/categories", (req, res) => {
+app.post("/api/categories", authMiddleware, (req, res) => {
   const { name, parent_id, description, display_order, is_published, icon } = req.body;
   try {
     const result = db.prepare(`
@@ -224,7 +293,7 @@ app.post("/api/categories", (req, res) => {
   }
 });
 
-app.put("/api/categories/:id", (req, res) => {
+app.put("/api/categories/:id", authMiddleware, (req, res) => {
   const { id } = req.params;
   const { name, parent_id, description, display_order, is_published, icon } = req.body;
   try {
@@ -240,7 +309,7 @@ app.put("/api/categories/:id", (req, res) => {
   }
 });
 
-app.delete("/api/categories/:id", (req, res) => {
+app.delete("/api/categories/:id", authMiddleware, (req, res) => {
   const { id } = req.params;
   try {
     db.prepare("DELETE FROM categories WHERE id = ? AND tenant_id = ?").run(id, (req as any).tenantId);
@@ -272,7 +341,7 @@ app.get("/api/articles/:id", (req, res) => {
   res.json(article);
 });
 
-app.post("/api/articles", (req, res) => {
+app.post("/api/articles", authMiddleware, (req, res) => {
   const { title, subtitle, category_id, summary, content, thumbnail_url, status, publish_date, reading_time, allow_anonymous, allow_all_registered, allowed_roles, allowed_users, is_pinned } = req.body;
   const finalCategoryId = category_id || null;
   console.log('Creating new article:', { title, status, category_id: finalCategoryId, tenantId: (req as any).tenantId });
@@ -289,7 +358,7 @@ app.post("/api/articles", (req, res) => {
   }
 });
 
-app.put("/api/articles/:id", (req, res) => {
+app.put("/api/articles/:id", authMiddleware, (req, res) => {
   const { id } = req.params;
   const { title, subtitle, category_id, summary, content, thumbnail_url, status, publish_date, reading_time, allow_anonymous, allow_all_registered, allowed_roles, allowed_users, is_pinned } = req.body;
   const finalCategoryId = category_id || null;
@@ -308,7 +377,7 @@ app.put("/api/articles/:id", (req, res) => {
   }
 });
 
-app.patch("/api/articles/:id", (req, res) => {
+app.patch("/api/articles/:id", authMiddleware, (req, res) => {
   const { id } = req.params;
   const updates = req.body;
   const fields = Object.keys(updates);
@@ -329,7 +398,7 @@ app.patch("/api/articles/:id", (req, res) => {
   res.json({ success: true });
 });
 
-app.delete("/api/articles/:id", (req, res) => {
+app.delete("/api/articles/:id", authMiddleware, (req, res) => {
   const { id } = req.params;
   db.prepare("DELETE FROM articles WHERE id = ? AND tenant_id = ?").run(id, (req as any).tenantId);
   res.json({ success: true });
@@ -368,6 +437,7 @@ app.get("/api/users", (req, res) => {
 
 // API Proxy to Java Backend (Fallback for non-local routes)
 let JAVA_BACKEND_URL = process.env.JAVA_BACKEND_URL;
+console.log('JAVA_BACKEND_URL:', JAVA_BACKEND_URL || 'Not set');
 if (JAVA_BACKEND_URL) {
   if (!JAVA_BACKEND_URL.startsWith('http')) {
     JAVA_BACKEND_URL = 'http://' + JAVA_BACKEND_URL;
@@ -400,19 +470,33 @@ if (JAVA_BACKEND_URL) {
 
 // Vite middleware for development
 if (process.env.NODE_ENV !== "production") {
-  const vite = await createViteServer({
-    server: { middlewareMode: true },
-    appType: "spa",
-  });
-  app.use(vite.middlewares);
+  try {
+    console.log("Initializing Vite server...");
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+    console.log("Vite middleware integrated");
+  } catch (err) {
+    console.error("Failed to initialize Vite server:", err);
+  }
 } else {
+  console.log("Running in production mode, serving static files from dist");
   app.use(express.static(path.join(__dirname, "dist")));
   app.get("*", (req, res) => {
     res.sendFile(path.join(__dirname, "dist", "index.html"));
   });
 }
 
+// Global Error Handler
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Unhandled Error:', err);
+  res.status(500).json({ error: 'Internal Server Error', message: err.message });
+});
+
 const PORT = 3000;
+console.log(`Attempting to start server on port ${PORT}...`);
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server successfully started and running on http://localhost:${PORT}`);
 });

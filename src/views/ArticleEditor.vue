@@ -18,12 +18,14 @@ import SelectionModal from '../components/SelectionModal.vue';
 import ImageSelectorModal from '../components/ImageSelectorModal.vue';
 import CategorySelect from '../components/CategorySelect.vue';
 import { useData } from '../composables/useData';
+import { useApi } from '../composables/useApi';
 import type { Article } from '../types';
 
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
 const { categories, fetchData, tenantId } = useData();
+const { apiFetch } = useApi();
 
 const editingArticle = ref<Partial<Article>>({
   title: '',
@@ -150,11 +152,10 @@ const saveArticle = async (statusOverride?: Article['status']) => {
   const url = article.id ? `/api/articles/${article.id}` : '/api/articles';
   
   try {
-    const res = await fetch(url, {
+    const res = await apiFetch(url, {
       method,
       headers: { 
-        'Content-Type': 'application/json',
-        'X-Tenant-ID': tenantId.value
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(article)
     });
@@ -168,9 +169,7 @@ const saveArticle = async (statusOverride?: Article['status']) => {
 
 const loadArticle = async (id: number) => {
   try {
-    const res = await fetch(`/api/articles/${id}`, {
-      headers: { 'X-Tenant-ID': tenantId.value }
-    });
+    const res = await apiFetch(`/api/articles/${id}`);
     if (res.ok) {
       const art = await res.json();
       editingArticle.value = {
@@ -189,10 +188,9 @@ onMounted(async () => {
   
   // Fetch roles and users from DB
   try {
-    const headers = { 'X-Tenant-ID': tenantId.value };
     const [rolesRes, usersRes] = await Promise.all([
-      fetch('/api/roles', { headers }),
-      fetch('/api/users', { headers })
+      apiFetch('/api/roles'),
+      apiFetch('/api/users')
     ]);
     if (rolesRes.ok) roles.value = await rolesRes.json();
     if (usersRes.ok) users.value = await usersRes.json();

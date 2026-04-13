@@ -14,12 +14,14 @@ import {
   AlertCircle
 } from 'lucide-vue-next';
 import { useData } from '../composables/useData';
+import { useApi } from '../composables/useApi';
 import type { Article, Comment } from '../types';
 
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
 const { getCategoryName, fetchData, tenantId } = useData();
+const { apiFetch } = useApi();
 
 const viewingArticle = ref<Article | null>(null);
 const comments = ref<Comment[]>([]);
@@ -29,17 +31,16 @@ const isLoading = ref(true);
 const fetchArticle = async (id: number) => {
   isLoading.value = true;
   try {
-    const res = await fetch(`/api/articles/${id}`, {
-      headers: { 'X-Tenant-ID': tenantId.value }
-    });
+    const res = await apiFetch(`/api/articles/${id}`).catch(err => ({ ok: false, status: 0, statusText: err.message }));
     if (res.ok) {
-      viewingArticle.value = await res.json();
+      viewingArticle.value = await (res as Response).json();
       // Increment view count
-      fetch(`/api/articles/${id}/view`, { 
-        method: 'POST',
-        headers: { 'X-Tenant-ID': tenantId.value }
-      });
+      apiFetch(`/api/articles/${id}/view`, { 
+        method: 'POST'
+      }).catch(err => console.error('Failed to increment view count:', err));
       fetchComments(id);
+    } else {
+      throw new Error((res as any).statusText || 'Failed to fetch article');
     }
   } catch (error) {
     console.error('Failed to fetch article:', error);
@@ -50,9 +51,7 @@ const fetchArticle = async (id: number) => {
 
 const fetchComments = async (articleId: number) => {
   try {
-    const res = await fetch(`/api/articles/${articleId}/comments`, {
-      headers: { 'X-Tenant-ID': tenantId.value }
-    });
+    const res = await apiFetch(`/api/articles/${articleId}/comments`);
     if (res.ok) {
       comments.value = await res.json();
     }
@@ -65,11 +64,10 @@ const submitComment = async () => {
   if (!viewingArticle.value || !newComment.value.author || !newComment.value.content) return;
   
   try {
-    const res = await fetch(`/api/articles/${viewingArticle.value.id}/comments`, {
+    const res = await apiFetch(`/api/articles/${viewingArticle.value.id}/comments`, {
       method: 'POST',
       headers: { 
-        'Content-Type': 'application/json',
-        'X-Tenant-ID': tenantId.value
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(newComment.value)
     });

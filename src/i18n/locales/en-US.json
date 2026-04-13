@@ -75,7 +75,10 @@
     "imageSelected": "Image selected",
     "pleaseSelectImage": "Please select an image as cover",
     "confirmSelection": "Confirm Selection",
-    "noMatchingImages": "No matching images found"
+    "noMatchingImages": "No matching images found",
+    "logout": "Logout",
+    "login": "Login",
+    "guest": "Guest"
   },
   "article": {
     "title": "Title",
@@ -96,6 +99,7 @@
     "selectRoles": "Select Roles",
     "selectUsers": "Select Users",
     "selectCategory": "Select Category",
+    "allCategories": "All Categories",
     "wordCount": "Words",
     "estReadingTime": "Est. Reading",
     "minutes": "min",

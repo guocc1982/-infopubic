@@ -22,11 +22,13 @@ import {
   X
 } from 'lucide-vue-next';
 import { useData } from '../composables/useData';
+import { useApi } from '../composables/useApi';
 import type { Article } from '../types';
 
 const router = useRouter();
 const { t } = useI18n();
 const { categories, articles, isLoading, fetchData, getCategoryName, searchQuery, tenantId } = useData();
+const { apiFetch } = useApi();
 
 const selectedCategoryId = ref<number | null>(null);
 const selectedStatus = ref<'all' | 'published' | 'draft' | 'archived' | 'pending'>('all');
@@ -143,42 +145,28 @@ const getStatusColor = (status: string) => {
 
 const deleteArticle = async (id: number) => {
   if (!confirm(t('common.deleteConfirm'))) return;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
   try {
-    const res = await fetch(`/api/articles/${id}`, { 
-      method: 'DELETE',
-      headers: { 'X-Tenant-ID': tenantId.value },
-      signal: controller.signal
+    const res = await apiFetch(`/api/articles/${id}`, { 
+      method: 'DELETE'
     });
-    clearTimeout(timeoutId);
     if (res.ok) await fetchData();
   } catch (error) {
     console.error('Failed to delete article:', error);
-  } finally {
-    clearTimeout(timeoutId);
   }
 };
 
 const bulkDelete = async () => {
   if (!confirm(t('common.bulkDeleteConfirm', { count: selectedArticleIds.value.length }))) return;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
   try {
     await Promise.all(selectedArticleIds.value.map(id => 
-      fetch(`/api/articles/${id}`, { 
-        method: 'DELETE',
-        headers: { 'X-Tenant-ID': tenantId.value },
-        signal: controller.signal
+      apiFetch(`/api/articles/${id}`, { 
+        method: 'DELETE'
       })
     ));
-    clearTimeout(timeoutId);
     selectedArticleIds.value = [];
     await fetchData();
   } catch (error) {
     console.error('Failed to delete articles:', error);
-  } finally {
-    clearTimeout(timeoutId);
   }
 };
 
@@ -233,29 +221,21 @@ const performBulkEdit = async () => {
     return;
   }
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
-
   try {
     await Promise.all(selectedArticleIds.value.map(id => 
-      fetch(`/api/articles/${id}`, {
+      apiFetch(`/api/articles/${id}`, {
         method: 'PATCH',
         headers: { 
-          'Content-Type': 'application/json',
-          'X-Tenant-ID': tenantId.value
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify(updates),
-        signal: controller.signal
+        body: JSON.stringify(updates)
       })
     ));
-    clearTimeout(timeoutId);
     isBulkEditModalOpen.value = false;
     selectedArticleIds.value = [];
     await fetchData();
   } catch (error) {
     console.error('Failed to perform bulk edit:', error);
-  } finally {
-    clearTimeout(timeoutId);
   }
 };
 

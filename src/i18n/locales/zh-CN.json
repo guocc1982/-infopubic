@@ -75,7 +75,10 @@
     "imageSelected": "已选择图片",
     "pleaseSelectImage": "请选择一张图片作为封面",
     "confirmSelection": "确认选择",
-    "noMatchingImages": "未找到匹配的图片"
+    "noMatchingImages": "未找到匹配的图片",
+    "logout": "退出登录",
+    "login": "登录",
+    "guest": "访客"
   },
   "article": {
     "title": "标题",
@@ -96,6 +99,7 @@
     "selectRoles": "选择角色",
     "selectUsers": "选择用户",
     "selectCategory": "选择分类",
+    "allCategories": "全部分类",
     "wordCount": "字数",
     "estReadingTime": "预计阅读",
     "minutes": "分钟",

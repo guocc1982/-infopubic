@@ -14,14 +14,18 @@ import {
   FolderTree,
   ArrowLeft,
   Languages,
-  Building2
+  Building2,
+  LogOut,
+  LogIn
 } from 'lucide-vue-next';
 import { useData } from './composables/useData';
+import { useAuth } from './composables/useAuth';
 
 const route = useRoute();
 const router = useRouter();
 const { t, locale } = useI18n();
 const { tenantId, setTenantId, searchQuery } = useData();
+const { user, isAuthenticated, logout } = useAuth();
 const isSidebarCollapsed = ref(false);
 
 const tenants = [
@@ -62,6 +66,11 @@ const pageTitle = computed(() => {
   }
 });
 
+const handleLogout = () => {
+  logout();
+  router.push('/login');
+};
+
 const navigateTo = (path: string) => {
   router.push(path);
 };
@@ -71,6 +80,7 @@ const navigateTo = (path: string) => {
   <div class="flex h-screen bg-[#F8FAFC] text-slate-900 font-sans overflow-hidden">
     <!-- Sidebar -->
     <aside 
+      v-if="route.name !== 'login'"
       :class="[
         'bg-white border-r border-slate-200 transition-all duration-300 flex flex-col',
         isSidebarCollapsed ? 'w-20' : 'w-64'
@@ -151,22 +161,48 @@ const navigateTo = (path: string) => {
         <div v-if="!isSidebarCollapsed" class="bg-slate-50 rounded-2xl p-4">
           <div class="flex items-center gap-3 mb-3">
             <div class="w-10 h-10 rounded-full bg-indigo-100 border-2 border-white overflow-hidden">
-              <img src="https://picsum.photos/seed/user/100/100" alt="Avatar" referrerPolicy="no-referrer" />
+              <img :src="`https://picsum.photos/seed/${user?.username || 'user'}/100/100`" alt="Avatar" referrerPolicy="no-referrer" />
             </div>
-            <div>
-              <p class="text-sm font-semibold">Admin</p>
-              <p class="text-xs text-slate-400">{{ t('common.systemAdmin') }}</p>
+            <div class="min-w-0">
+              <p class="text-sm font-semibold truncate">{{ user?.display_name || 'Guest' }}</p>
+              <p class="text-xs text-slate-400 truncate">{{ user?.role || t('common.guest') }}</p>
             </div>
           </div>
-          <button class="w-full flex items-center justify-center gap-2 p-2 text-xs font-medium text-slate-500 hover:text-indigo-600 transition-colors">
-            <Settings :size="14" />
-            {{ t('nav.settings') }}
-          </button>
+          <div class="space-y-1">
+            <button class="w-full flex items-center gap-2 p-2 text-xs font-medium text-slate-500 hover:text-indigo-600 transition-colors">
+              <Settings :size="14" />
+              {{ t('nav.settings') }}
+            </button>
+            <button 
+              v-if="isAuthenticated"
+              @click="handleLogout"
+              class="w-full flex items-center gap-2 p-2 text-xs font-medium text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            >
+              <LogOut :size="14" />
+              {{ t('common.logout') || 'Logout' }}
+            </button>
+            <button 
+              v-else
+              @click="navigateTo('/login')"
+              class="w-full flex items-center gap-2 p-2 text-xs font-medium text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+            >
+              <LogIn :size="14" />
+              {{ t('common.login') || 'Login' }}
+            </button>
+          </div>
         </div>
-        <div v-else class="flex justify-center">
+        <div v-else class="flex flex-col items-center gap-4">
           <div class="w-10 h-10 rounded-full bg-indigo-100 border-2 border-white overflow-hidden cursor-pointer">
-            <img src="https://picsum.photos/seed/user/100/100" alt="Avatar" referrerPolicy="no-referrer" />
+            <img :src="`https://picsum.photos/seed/${user?.username || 'user'}/100/100`" alt="Avatar" referrerPolicy="no-referrer" />
           </div>
+          <button 
+            v-if="isAuthenticated"
+            @click="handleLogout"
+            class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            :title="t('common.logout') || 'Logout'"
+          >
+            <LogOut :size="18" />
+          </button>
         </div>
       </div>
     </aside>
