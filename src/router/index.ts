@@ -4,6 +4,7 @@ import ContentManagement from '../views/ContentManagement.vue';
 import CategoryManagement from '../views/CategoryManagement.vue';
 import ArticleEditor from '../views/ArticleEditor.vue';
 import ArticleDetail from '../views/ArticleDetail.vue';
+import CommentManagement from '../views/CommentManagement.vue';
 import Settings from '../views/Settings.vue';
 import Login from '../views/Login.vue';
 import { useAuth } from '../composables/useAuth';
@@ -39,6 +40,12 @@ const routes: RouteRecordRaw[] = [
     path: '/settings',
     name: 'settings',
     component: Settings,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/comments',
+    name: 'comment-mgmt',
+    component: CommentManagement,
     meta: { requiresAuth: true }
   },
   {

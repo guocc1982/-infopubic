@@ -201,7 +201,7 @@ const exportArticles = () => {
   const url = URL.createObjectURL(blob);
   const timestamp = new Date().toISOString().split('T')[0];
   link.setAttribute('href', url);
-  link.setAttribute('download', `文章导出_${timestamp}.csv`);
+  link.setAttribute('download', `${t('common.exportFilename')}_${timestamp}.csv`);
   link.style.visibility = 'hidden';
   document.body.appendChild(link);
   link.click();
@@ -511,7 +511,7 @@ onMounted(() => {
                   <div class="min-w-0">
                     <p class="text-sm font-bold text-slate-900 line-clamp-1 group-hover:text-indigo-600 transition-colors">{{ article.title }}</p>
                     <div class="flex items-center gap-2 mt-1">
-                      <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-100 px-1.5 py-0.5 rounded">{{ article.author || '管理员' }}</span>
+                      <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-100 px-1.5 py-0.5 rounded">{{ article.author || t('common.admin') }}</span>
                       <span class="text-[10px] text-slate-300">|</span>
                       <span class="text-[10px] text-slate-400">{{ article.reading_time }} {{ t('article.minutes') }} read</span>
                     </div>
@@ -594,7 +594,7 @@ onMounted(() => {
       </div>
       
       <div class="p-6 border-t border-slate-100 flex items-center justify-between bg-slate-50/30">
-        <p class="text-xs font-medium text-slate-400">显示 {{ filteredArticles.length }} 条结果中的第 1-{{ filteredArticles.length }} 条</p>
+        <p class="text-xs font-medium text-slate-400">{{ t('common.showingResults', { count: filteredArticles.length, total: articles.length }) }}</p>
         <div class="flex items-center gap-2">
           <button class="p-2 border border-slate-200 rounded-lg text-slate-400 hover:bg-white transition-all disabled:opacity-50" disabled>
             <ChevronLeft :size="16" />

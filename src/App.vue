@@ -17,7 +17,8 @@ import {
   Building2,
   LogOut,
   LogIn,
-  FileCode
+  FileCode,
+  MessageSquare
 } from 'lucide-vue-next';
 import { useData } from './composables/useData';
 import { useAuth } from './composables/useAuth';
@@ -93,6 +94,7 @@ const currentView = computed(() => {
   if (route.path === '/reading-list') return 'reading-list';
   if (route.path === '/content-management') return 'info-list';
   if (route.path === '/category-management') return 'category-mgmt';
+  if (route.path === '/comments') return 'comment-mgmt';
   if (route.path === '/settings') return 'settings';
   if (route.path.startsWith('/article/')) {
     if (route.path.includes('/edit/') || route.path.endsWith('/new')) return 'article-editor';
@@ -106,6 +108,7 @@ const pageTitle = computed(() => {
     case 'reading-list': return t('nav.readingList');
     case 'info-list': return t('nav.contentManagement');
     case 'category-mgmt': return t('nav.categoryManagement');
+    case 'comment-mgmt': return t('nav.commentManagement');
     case 'settings': return t('nav.settings');
     case 'article-detail': return currentArticleTitle.value || t('article.noTitle');
     case 'article-editor': return route.params.id ? t('common.edit') : t('common.publish');
@@ -184,6 +187,18 @@ const navigateTo = (path: string) => {
         >
           <FolderTree :size="20" :class="currentView === 'category-mgmt' ? '' : 'group-hover:text-indigo-500'" :style="currentView === 'category-mgmt' ? { color: systemSettings.primary_color } : {}" />
           <span v-if="!isSidebarCollapsed" class="font-medium">{{ t('nav.categoryManagement') }}</span>
+        </router-link>
+
+        <router-link 
+          to="/comments"
+          :class="[
+            'w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group',
+            currentView === 'comment-mgmt' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-500 hover:bg-slate-50'
+          ]"
+          :style="currentView === 'comment-mgmt' ? { color: systemSettings.primary_color, backgroundColor: `color-mix(in srgb, ${systemSettings.primary_color} 10%, white)` } : {}"
+        >
+          <MessageSquare :size="20" :class="currentView === 'comment-mgmt' ? '' : 'group-hover:text-indigo-500'" :style="currentView === 'comment-mgmt' ? { color: systemSettings.primary_color } : {}" />
+          <span v-if="!isSidebarCollapsed" class="font-medium">{{ t('nav.commentManagement') }}</span>
         </router-link>
 
         <a 

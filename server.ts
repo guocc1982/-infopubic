@@ -89,10 +89,12 @@ function initDb() {
       article_id INTEGER NOT NULL,
       author TEXT NOT NULL,
       content TEXT NOT NULL,
+      is_approved INTEGER DEFAULT 1,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
   try { db.exec("ALTER TABLE comments ADD COLUMN tenant_id TEXT NOT NULL DEFAULT 'default'"); } catch(e) {}
+  try { db.exec("ALTER TABLE comments ADD COLUMN is_approved INTEGER DEFAULT 1"); } catch(e) {}
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS roles (
@@ -147,9 +149,21 @@ function initDb() {
       theme TEXT DEFAULT 'light',
       primary_color TEXT DEFAULT '#4f46e5',
       email_notifications INTEGER DEFAULT 1,
-      push_notifications INTEGER DEFAULT 1
+      push_notifications INTEGER DEFAULT 1,
+      enable_comments INTEGER DEFAULT 1,
+      require_comment_approval INTEGER DEFAULT 0,
+      allow_registration INTEGER DEFAULT 1,
+      default_role TEXT DEFAULT 'user',
+      timezone TEXT DEFAULT 'UTC+8'
     )
   `);
+
+  // Add missing columns to settings if they don't exist
+  try { db.exec("ALTER TABLE settings ADD COLUMN enable_comments INTEGER DEFAULT 1"); } catch(e) {}
+  try { db.exec("ALTER TABLE settings ADD COLUMN require_comment_approval INTEGER DEFAULT 0"); } catch(e) {}
+  try { db.exec("ALTER TABLE settings ADD COLUMN allow_registration INTEGER DEFAULT 1"); } catch(e) {}
+  try { db.exec("ALTER TABLE settings ADD COLUMN default_role TEXT DEFAULT 'user'"); } catch(e) {}
+  try { db.exec("ALTER TABLE settings ADD COLUMN timezone TEXT DEFAULT 'UTC+8'"); } catch(e) {}
 
   // Seed default settings if not exists
   const settingsCount = db.prepare("SELECT COUNT(*) as count FROM settings WHERE tenant_id = 'default'").get() as any;
@@ -349,6 +363,16 @@ app.get("/api/auth/me", authMiddleware, (req, res) => {
   res.json({ user: (req as any).user });
 });
 
+/**
+ * @swagger
+ * /api/health:
+ *   get:
+ *     summary: Check system health
+ *     tags: [System]
+ *     responses:
+ *       200:
+ *         description: System is healthy
+ */
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", database: !!db, javaBackend: !!process.env.JAVA_BACKEND_URL });
 });
@@ -385,7 +409,10 @@ app.get("/api/settings", (req, res) => {
   res.json({
     ...settings,
     email_notifications: !!settings.email_notifications,
-    push_notifications: !!settings.push_notifications
+    push_notifications: !!settings.push_notifications,
+    enable_comments: !!settings.enable_comments,
+    require_comment_approval: !!settings.require_comment_approval,
+    allow_registration: !!settings.allow_registration
   });
 });
 
@@ -418,7 +445,12 @@ app.post("/api/settings", authMiddleware, (req, res) => {
       theme, 
       primary_color, 
       email_notifications, 
-      push_notifications 
+      push_notifications,
+      enable_comments,
+      require_comment_approval,
+      allow_registration,
+      default_role,
+      timezone
     } = req.body || {};
 
     if (!req.body) {
@@ -429,8 +461,10 @@ app.post("/api/settings", authMiddleware, (req, res) => {
 
     db.prepare(`
       INSERT INTO settings (
-        tenant_id, site_name, site_description, language, theme, primary_color, email_notifications, push_notifications
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        tenant_id, site_name, site_description, language, theme, primary_color, 
+        email_notifications, push_notifications, enable_comments, 
+        require_comment_approval, allow_registration, default_role, timezone
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(tenant_id) DO UPDATE SET
         site_name = excluded.site_name,
         site_description = excluded.site_description,
@@ -438,7 +472,12 @@ app.post("/api/settings", authMiddleware, (req, res) => {
         theme = excluded.theme,
         primary_color = excluded.primary_color,
         email_notifications = excluded.email_notifications,
-        push_notifications = excluded.push_notifications
+        push_notifications = excluded.push_notifications,
+        enable_comments = excluded.enable_comments,
+        require_comment_approval = excluded.require_comment_approval,
+        allow_registration = excluded.allow_registration,
+        default_role = excluded.default_role,
+        timezone = excluded.timezone
     `).run(
       tenantId, 
       site_name || 'Hub CMS', 
@@ -447,7 +486,12 @@ app.post("/api/settings", authMiddleware, (req, res) => {
       theme || 'light', 
       primary_color || '#4f46e5', 
       email_notifications ? 1 : 0, 
-      push_notifications ? 1 : 0
+      push_notifications ? 1 : 0,
+      enable_comments ? 1 : 0,
+      require_comment_approval ? 1 : 0,
+      allow_registration ? 1 : 0,
+      default_role || 'user',
+      timezone || 'UTC+8'
     );
     
     console.log(`Settings saved successfully for tenant: ${tenantId}`);
@@ -468,6 +512,34 @@ app.post("/api/settings", authMiddleware, (req, res) => {
  *     responses:
  *       200:
  *         description: List of categories
+ *   post:
+ *     summary: Create a new category
+ *     tags: [Categories]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name]
+ *             properties:
+ *               name:
+ *                 type: string
+ *               parent_id:
+ *                 type: integer
+ *               description:
+ *                 type: string
+ *               display_order:
+ *                 type: integer
+ *               is_published:
+ *                 type: boolean
+ *               icon:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Category created
  */
 app.get("/api/categories", (req, res) => {
   const categories = db.prepare("SELECT * FROM categories WHERE tenant_id = ? ORDER BY display_order ASC").all((req as any).tenantId);
@@ -488,6 +560,44 @@ app.post("/api/categories", authMiddleware, (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/categories/{id}:
+ *   put:
+ *     summary: Update a category
+ *     tags: [Categories]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Category updated
+ *   delete:
+ *     summary: Delete a category
+ *     tags: [Categories]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Category deleted
+ */
 app.put("/api/categories/:id", authMiddleware, (req, res) => {
   const { id } = req.params;
   const { name, parent_id, description, display_order, is_published, icon } = req.body;
@@ -524,6 +634,46 @@ app.delete("/api/categories/:id", authMiddleware, (req, res) => {
  *     responses:
  *       200:
  *         description: List of articles
+ *   post:
+ *     summary: Create a new article
+ *     tags: [Articles]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [title]
+ *             properties:
+ *               title:
+ *                 type: string
+ *               subtitle:
+ *                 type: string
+ *               category_id:
+ *                 type: integer
+ *               summary:
+ *                 type: string
+ *               content:
+ *                 type: string
+ *               thumbnail_url:
+ *                 type: string
+ *               status:
+ *                 type: string
+ *               publish_date:
+ *                 type: string
+ *               reading_time:
+ *                 type: integer
+ *               allow_anonymous:
+ *                 type: boolean
+ *               allow_all_registered:
+ *                 type: boolean
+ *               is_pinned:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Article created
  */
 app.get("/api/articles", (req, res) => {
   const articles = db.prepare(`
@@ -536,6 +686,76 @@ app.get("/api/articles", (req, res) => {
   res.json(articles);
 });
 
+/**
+ * @swagger
+ * /api/articles/{id}:
+ *   get:
+ *     summary: Get article by ID
+ *     tags: [Articles]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Article details
+ *   put:
+ *     summary: Update an article
+ *     tags: [Articles]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Article updated
+ *   patch:
+ *     summary: Partially update an article
+ *     tags: [Articles]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Article partially updated
+ *   delete:
+ *     summary: Delete an article
+ *     tags: [Articles]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Article deleted
+ */
 app.get("/api/articles/:id", (req, res) => {
   const article = db.prepare(`
     SELECT a.*, c.name as category_name 
@@ -609,32 +829,229 @@ app.delete("/api/articles/:id", authMiddleware, (req, res) => {
   res.json({ success: true });
 });
 
+/**
+ * @swagger
+ * /api/articles/{id}/comments:
+ *   get:
+ *     summary: Get comments for an article
+ *     tags: [Comments]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: List of comments
+ *   post:
+ *     summary: Post a comment to an article
+ *     tags: [Comments]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [author, content]
+ *             properties:
+ *               author:
+ *                 type: string
+ *               content:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Comment posted
+ */
+/**
+ * @swagger
+ * /api/comments:
+ *   get:
+ *     summary: Get all comments (for management)
+ *     tags: [Comments]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of all comments
+ */
+app.get("/api/comments", authMiddleware, (req, res) => {
+  const tenantId = (req as any).tenantId;
+  if ((req as any).user.role !== 'admin' && (req as any).user.role !== 'editor') {
+    return res.status(403).json({ error: "Only admins and editors can manage comments" });
+  }
+
+  const comments = db.prepare("SELECT * FROM comments WHERE tenant_id = ? ORDER BY created_at DESC").all(tenantId);
+  res.json(comments);
+});
+
 app.get("/api/articles/:id/comments", (req, res) => {
-  const comments = db.prepare("SELECT * FROM comments WHERE article_id = ? AND tenant_id = ? ORDER BY created_at DESC").all(req.params.id, (req as any).tenantId);
+  const tenantId = (req as any).tenantId;
+  const articleId = req.params.id;
+  
+  // If user is authenticated and is admin/editor, show all comments
+  // Otherwise only show approved ones
+  const authHeader = req.headers.authorization;
+  let showAll = false;
+  
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.split(" ")[1];
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as any;
+      if (decoded.role === 'admin' || decoded.role === 'editor') {
+        showAll = true;
+      }
+    } catch (e) {}
+  }
+
+  const query = showAll 
+    ? "SELECT * FROM comments WHERE article_id = ? AND tenant_id = ? ORDER BY created_at DESC"
+    : "SELECT * FROM comments WHERE article_id = ? AND tenant_id = ? AND is_approved = 1 ORDER BY created_at DESC";
+    
+  const comments = db.prepare(query).all(articleId, tenantId);
   res.json(comments);
 });
 
 app.post("/api/articles/:id/comments", (req, res) => {
   const { id } = req.params;
   const { author, content } = req.body;
+  const tenantId = (req as any).tenantId;
+
+  // Check if comments are enabled and if approval is required
+  const settings = db.prepare("SELECT enable_comments, require_comment_approval FROM settings WHERE tenant_id = ?").get(tenantId) as any;
+  
+  if (settings && !settings.enable_comments) {
+    return res.status(403).json({ error: "Comments are disabled" });
+  }
+
+  const isApproved = (settings && settings.require_comment_approval) ? 0 : 1;
+
   const result = db.prepare(`
-    INSERT INTO comments (article_id, author, content, tenant_id)
-    VALUES (?, ?, ?, ?)
-  `).run(id, author, content, (req as any).tenantId);
-  res.json({ id: result.lastInsertRowid });
+    INSERT INTO comments (article_id, author, content, is_approved, tenant_id)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(id, author, content, isApproved, tenantId);
+  
+  res.json({ 
+    id: result.lastInsertRowid, 
+    is_approved: !!isApproved,
+    message: isApproved ? "Comment posted" : "Comment submitted for approval"
+  });
 });
 
+/**
+ * @swagger
+ * /api/comments/{id}:
+ *   patch:
+ *     summary: Update comment status (approve/reject)
+ *     tags: [Comments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               is_approved:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Comment updated
+ */
+app.patch("/api/comments/:id", authMiddleware, (req, res) => {
+  const { id } = req.params;
+  const { is_approved } = req.body;
+  const tenantId = (req as any).tenantId;
+
+  if ((req as any).user.role !== 'admin' && (req as any).user.role !== 'editor') {
+    return res.status(403).json({ error: "Only admins and editors can approve comments" });
+  }
+
+  try {
+    db.prepare("UPDATE comments SET is_approved = ? WHERE id = ? AND tenant_id = ?")
+      .run(is_approved ? 1 : 0, id, tenantId);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+app.delete("/api/comments/:id", authMiddleware, (req, res) => {
+  const { id } = req.params;
+  const tenantId = (req as any).tenantId;
+
+  if ((req as any).user.role !== 'admin' && (req as any).user.role !== 'editor') {
+    return res.status(403).json({ error: "Only admins and editors can delete comments" });
+  }
+
+  try {
+    db.prepare("DELETE FROM comments WHERE id = ? AND tenant_id = ?").run(id, tenantId);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/articles/{id}/view:
+ *   post:
+ *     summary: Increment article view count
+ *     tags: [Articles]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: View count incremented
+ */
 app.post("/api/articles/:id/view", (req, res) => {
   const { id } = req.params;
   db.prepare("UPDATE articles SET view_count = view_count + 1 WHERE id = ? AND tenant_id = ?").run(id, (req as any).tenantId);
   res.json({ success: true });
 });
 
+/**
+ * @swagger
+ * /api/roles:
+ *   get:
+ *     summary: Get all roles
+ *     tags: [Roles]
+ *     responses:
+ *       200:
+ *         description: List of roles
+ */
 app.get("/api/roles", (req, res) => {
   const roles = db.prepare("SELECT * FROM roles WHERE tenant_id = ?").all((req as any).tenantId);
   res.json(roles);
 });
 
+/**
+ * @swagger
+ * /api/users:
+ *   get:
+ *     summary: Get all users
+ *     tags: [Users]
+ *     responses:
+ *       200:
+ *         description: List of users
+ */
 app.get("/api/users", (req, res) => {
   const users = db.prepare("SELECT * FROM users WHERE tenant_id = ?").all((req as any).tenantId);
   res.json(users);

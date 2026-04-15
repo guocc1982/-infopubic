@@ -11,7 +11,8 @@ import {
   MessageSquare, 
   Send, 
   Link as LinkIcon,
-  AlertCircle
+  AlertCircle,
+  CheckCircle2
 } from 'lucide-vue-next';
 import { useData } from '../composables/useData';
 import { useApi } from '../composables/useApi';
@@ -65,6 +66,8 @@ const fetchComments = async (articleId: number) => {
   }
 };
 
+const lastSubmissionStatus = ref<'none' | 'success' | 'pending'>('none');
+
 const submitComment = async () => {
   if (!viewingArticle.value || !newComment.value.author || !newComment.value.content) return;
   
@@ -78,8 +81,19 @@ const submitComment = async () => {
     });
     
     if (res.ok) {
-      await fetchComments(viewingArticle.value.id);
+      const data = await res.json();
+      if (data.is_approved) {
+        await fetchComments(viewingArticle.value.id);
+        lastSubmissionStatus.value = 'success';
+      } else {
+        lastSubmissionStatus.value = 'pending';
+      }
       newComment.value = { author: '', content: '' };
+      
+      // Reset status after 5 seconds
+      setTimeout(() => {
+        lastSubmissionStatus.value = 'none';
+      }, 5000);
     }
   } catch (error) {
     console.error('Failed to submit comment:', error);
@@ -179,7 +193,15 @@ onMounted(async () => {
                 class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all resize-none"
               ></textarea>
             </div>
-            <div class="flex justify-end">
+            <div class="flex justify-end items-center gap-4">
+              <transition enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-0 translate-x-4" enter-to-class="opacity-100 translate-x-0" leave-active-class="transition duration-200 ease-in" leave-from-class="opacity-100 translate-x-0" leave-to-class="opacity-0 translate-x-4">
+                <div v-if="lastSubmissionStatus === 'pending'" class="text-amber-600 text-sm font-medium flex items-center gap-1.5">
+                  <Clock :size="16" /> {{ t('common.commentPending') || 'Comment submitted for approval' }}
+                </div>
+                <div v-else-if="lastSubmissionStatus === 'success'" class="text-emerald-600 text-sm font-medium flex items-center gap-1.5">
+                  <CheckCircle2 :size="16" /> {{ t('common.commentPosted') || 'Comment posted successfully' }}
+                </div>
+              </transition>
               <button 
                 @click="submitComment"
                 class="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"

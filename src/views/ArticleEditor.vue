@@ -42,7 +42,7 @@ const editingArticle = ref<Partial<Article>>({
   publish_date: new Date().toISOString().split('T')[0],
   view_count: 0,
   reading_time: 5,
-  author: user.value?.display_name || user.value?.username || '管理员',
+  author: user.value?.display_name || user.value?.username || t('common.admin'),
   allow_anonymous: true,
   allow_all_registered: false,
   allowed_roles: '',
@@ -80,7 +80,7 @@ const tinymceInit = {
   images_upload_handler: (blobInfo: any) => new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => resolve(e.target?.result as string);
-    reader.onerror = () => reject('图片上传失败');
+    reader.onerror = () => reject(t('common.uploadFailed'));
     reader.readAsDataURL(blobInfo.blob());
   }),
   file_picker_callback: (callback: any, value: any, meta: any) => {
@@ -233,7 +233,7 @@ onMounted(async () => {
       <div class="flex items-center gap-3">
         <div class="flex items-center gap-2 px-3 py-1 bg-slate-50 rounded-lg border border-slate-100 mr-4">
           <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">已自动保存</span>
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('common.autoSaved') }}</span>
         </div>
         <button 
           @click="isPreviewMode = !isPreviewMode"

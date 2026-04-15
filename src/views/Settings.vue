@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { 
   Save, 
@@ -115,14 +115,14 @@ onMounted(() => {
   fetchSettings();
 });
 
-const tabs = [
+const tabs = computed(() => [
   { id: 'profile', name: t('settings.tabs.profile'), icon: User },
   { id: 'general', name: t('settings.tabs.general'), icon: Globe },
   { id: 'security', name: t('settings.tabs.security'), icon: Shield },
   { id: 'appearance', name: t('settings.tabs.appearance'), icon: Palette },
   { id: 'notifications', name: t('settings.tabs.notifications'), icon: Bell },
   { id: 'advanced', name: t('settings.tabs.advanced'), icon: Database },
-];
+]);
 </script>
 
 <template>
@@ -232,8 +232,8 @@ const tabs = [
                 <div class="space-y-2">
                   <label class="text-xs font-bold text-slate-700 uppercase tracking-wider">{{ t('settings.general.language') }}</label>
                   <select v-model="settings.language" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none">
-                    <option value="zh-CN">简体中文</option>
-                    <option value="en-US">English</option>
+                    <option value="zh-CN">{{ t('common.zhCN') }}</option>
+                    <option value="en-US">{{ t('common.enUS') }}</option>
                   </select>
                 </div>
                 <div class="space-y-2">
