@@ -46,7 +46,7 @@ const routes: RouteRecordRaw[] = [
     path: '/comments',
     name: 'comment-mgmt',
     component: CommentManagement,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, requiresAdmin: true }
   },
   {
     path: '/article/new',
@@ -73,10 +73,12 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAdmin } = useAuth();
   
   if (to.meta.requiresAuth && !isAuthenticated.value) {
     next({ name: 'login', query: { redirect: to.fullPath } });
+  } else if (to.meta.requiresAdmin && !isAdmin.value) {
+    next({ name: 'reading-list' });
   } else if (to.name === 'login' && isAuthenticated.value) {
     next({ name: 'reading-list' });
   } else {

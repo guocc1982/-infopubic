@@ -15,6 +15,7 @@ import { useApi } from '../composables/useApi';
 import type { Category } from '../types';
 import CategoryTreeItem from '../components/CategoryTreeItem.vue';
 import CategorySelect from '../components/CategorySelect.vue';
+import ConfirmModal from '../components/ConfirmModal.vue';
 
 const { categories, fetchData, tenantId } = useData();
 const { apiFetch } = useApi();
@@ -25,6 +26,30 @@ const systemSettings = inject('systemSettings', ref({ primary_color: '#4f46e5' }
 
 const editingCategory = ref<Partial<Category> | null>(null);
 const searchQuery = ref('');
+
+const isDeleteModalOpen = ref(false);
+const categoryToDelete = ref<number | null>(null);
+
+const confirmDelete = (id: number) => {
+  categoryToDelete.value = id;
+  isDeleteModalOpen.value = true;
+};
+
+const executeDelete = async () => {
+  if (categoryToDelete.value === null) return;
+  const id = categoryToDelete.value;
+  try {
+    const res = await apiFetch(`/api/categories/${id}`, { 
+      method: 'DELETE'
+    });
+    if (res.ok) await fetchData();
+  } catch (error) {
+    console.error('Failed to delete category:', error);
+  } finally {
+    isDeleteModalOpen.value = false;
+    categoryToDelete.value = null;
+  }
+};
 
 const categoryTree = computed(() => {
   const map: Record<number, Category & { children: any[] }> = {};
@@ -67,16 +92,7 @@ const saveCategory = async (category: Partial<Category>) => {
 };
 
 const deleteCategory = async (id: number) => {
-  if (!confirm(t('common.deleteCategoryConfirm'))) return;
-  
-  try {
-    const res = await apiFetch(`/api/categories/${id}`, { 
-      method: 'DELETE'
-    });
-    if (res.ok) await fetchData();
-  } catch (error) {
-    console.error('Failed to delete category:', error);
-  }
+  confirmDelete(id);
 };
 
 onMounted(fetchData);
@@ -195,5 +211,14 @@ onMounted(fetchData);
         <p class="text-slate-500 text-sm">{{ t('common.createCategoryDesc') }}</p>
       </div>
     </div>
+
+    <ConfirmModal
+      :is-open="isDeleteModalOpen"
+      :title="t('common.delete') || 'Delete'"
+      :message="t('common.deleteCategoryConfirm') || 'Are you sure you want to delete this category? This will delete all subcategories.'"
+      type="danger"
+      @close="isDeleteModalOpen = false"
+      @confirm="executeDelete"
+    />
   </div>
 </template>

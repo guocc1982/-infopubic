@@ -24,6 +24,7 @@ import {
 import { useData } from '../composables/useData';
 import { useApi } from '../composables/useApi';
 import type { Article } from '../types';
+import ConfirmModal from '../components/ConfirmModal.vue';
 
 const router = useRouter();
 const { t } = useI18n();
@@ -39,6 +40,51 @@ const selectedArticleIds = ref<number[]>([]);
 const isAdvancedFilterOpen = ref(false);
 const activeDropdownId = ref<number | null>(null);
 const isBulkEditModalOpen = ref(false);
+
+const isDeleteModalOpen = ref(false);
+const articleToDelete = ref<number | null>(null);
+const isBulkDeleteModalOpen = ref(false);
+
+const confirmDelete = (id: number) => {
+  articleToDelete.value = id;
+  isDeleteModalOpen.value = true;
+};
+
+const executeDelete = async () => {
+  if (articleToDelete.value === null) return;
+  const id = articleToDelete.value;
+  try {
+    const res = await apiFetch(`/api/articles/${id}`, { 
+      method: 'DELETE'
+    });
+    if (res.ok) await fetchData(true);
+  } catch (error) {
+    console.error('Failed to delete article:', error);
+  } finally {
+    isDeleteModalOpen.value = false;
+    articleToDelete.value = null;
+  }
+};
+
+const confirmBulkDelete = () => {
+  isBulkDeleteModalOpen.value = true;
+};
+
+const executeBulkDelete = async () => {
+  try {
+    await Promise.all(selectedArticleIds.value.map(id => 
+      apiFetch(`/api/articles/${id}`, { 
+        method: 'DELETE'
+      })
+    ));
+    selectedArticleIds.value = [];
+    await fetchData(true);
+  } catch (error) {
+    console.error('Failed to delete articles:', error);
+  } finally {
+    isBulkDeleteModalOpen.value = false;
+  }
+};
 
 const bulkEditData = ref({
   category_id: null as number | null,
@@ -147,30 +193,11 @@ const getStatusColor = (status: string) => {
 };
 
 const deleteArticle = async (id: number) => {
-  if (!confirm(t('common.deleteConfirm'))) return;
-  try {
-    const res = await apiFetch(`/api/articles/${id}`, { 
-      method: 'DELETE'
-    });
-    if (res.ok) await fetchData(true);
-  } catch (error) {
-    console.error('Failed to delete article:', error);
-  }
+  confirmDelete(id);
 };
 
 const bulkDelete = async () => {
-  if (!confirm(t('common.bulkDeleteConfirm', { count: selectedArticleIds.value.length }))) return;
-  try {
-    await Promise.all(selectedArticleIds.value.map(id => 
-      apiFetch(`/api/articles/${id}`, { 
-        method: 'DELETE'
-      })
-    ));
-    selectedArticleIds.value = [];
-    await fetchData(true);
-  } catch (error) {
-    console.error('Failed to delete articles:', error);
-  }
+  confirmBulkDelete();
 };
 
 const exportArticles = () => {
@@ -594,7 +621,13 @@ onMounted(() => {
       </div>
       
       <div class="p-6 border-t border-slate-100 flex items-center justify-between bg-slate-50/30">
-        <p class="text-xs font-medium text-slate-400">{{ t('common.showingResults', { count: filteredArticles.length, total: articles.length }) }}</p>
+        <p class="text-xs font-medium text-slate-400">
+          {{ t('common.showingResults', { 
+            start: filteredArticles.length === 0 ? 0 : 1,
+            end: filteredArticles.length, 
+            total: articles.length 
+          }) }}
+        </p>
         <div class="flex items-center gap-2">
           <button class="p-2 border border-slate-200 rounded-lg text-slate-400 hover:bg-white transition-all disabled:opacity-50" disabled>
             <ChevronLeft :size="16" />
@@ -648,5 +681,23 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <ConfirmModal
+      :is-open="isDeleteModalOpen"
+      :title="t('common.delete') || 'Delete'"
+      :message="t('common.deleteConfirm') || 'Are you sure you want to delete this article?'"
+      type="danger"
+      @close="isDeleteModalOpen = false"
+      @confirm="executeDelete"
+    />
+
+    <ConfirmModal
+      :is-open="isBulkDeleteModalOpen"
+      :title="t('common.delete') || 'Delete'"
+      :message="t('common.bulkDeleteConfirm', { count: selectedArticleIds.length }) || `Are you sure you want to delete ${selectedArticleIds.length} articles?`"
+      type="danger"
+      @close="isBulkDeleteModalOpen = false"
+      @confirm="executeBulkDelete"
+    />
   </div>
 </template>

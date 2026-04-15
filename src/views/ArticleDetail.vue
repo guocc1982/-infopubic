@@ -16,6 +16,7 @@ import {
 } from 'lucide-vue-next';
 import { useData } from '../composables/useData';
 import { useApi } from '../composables/useApi';
+import { useAuth } from '../composables/useAuth';
 import type { Article, Comment } from '../types';
 
 const route = useRoute();
@@ -23,6 +24,7 @@ const router = useRouter();
 const { t } = useI18n();
 const { getCategoryName, fetchData, tenantId, currentArticleTitle } = useData();
 const { apiFetch } = useApi();
+const { user } = useAuth();
 
 // Inject system settings from App.vue
 const systemSettings = inject('systemSettings', ref({ primary_color: '#4f46e5' }));
@@ -67,17 +69,24 @@ const fetchComments = async (articleId: number) => {
 };
 
 const lastSubmissionStatus = ref<'none' | 'success' | 'pending'>('none');
+const isSubmitting = ref(false);
 
 const submitComment = async () => {
-  if (!viewingArticle.value || !newComment.value.author || !newComment.value.content) return;
+  if (isSubmitting.value) return;
+  const authorName = user.value?.display_name || user.value?.username || 'Anonymous';
+  if (!viewingArticle.value || !newComment.value.content) return;
   
+  isSubmitting.value = true;
   try {
     const res = await apiFetch(`/api/articles/${viewingArticle.value.id}/comments`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(newComment.value)
+      body: JSON.stringify({
+        author: authorName,
+        content: newComment.value.content
+      })
     });
     
     if (res.ok) {
@@ -88,6 +97,7 @@ const submitComment = async () => {
       } else {
         lastSubmissionStatus.value = 'pending';
       }
+      window.dispatchEvent(new CustomEvent('comments-updated'));
       newComment.value = { author: '', content: '' };
       
       // Reset status after 5 seconds
@@ -97,6 +107,8 @@ const submitComment = async () => {
     }
   } catch (error) {
     console.error('Failed to submit comment:', error);
+  } finally {
+    isSubmitting.value = false;
   }
 };
 
@@ -177,13 +189,14 @@ onMounted(async () => {
         <div class="bg-slate-50 rounded-3xl p-6 md:p-8 mb-12">
           <h4 class="text-lg font-bold mb-4">{{ t('common.postComment') }}</h4>
           <div class="space-y-4">
-            <div>
-              <input 
-                v-model="newComment.author"
-                type="text" 
-                :placeholder="t('common.yourName')" 
-                class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
-              />
+            <div v-if="!user" class="text-sm text-slate-500 mb-2">
+              {{ t('common.commentAsAnonymous') || 'You are commenting as Anonymous' }}
+            </div>
+            <div v-else class="text-sm text-slate-500 mb-2 flex items-center gap-2">
+              <div class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs">
+                {{ (user.display_name || user.username).charAt(0).toUpperCase() }}
+              </div>
+              {{ t('common.commentingAs') || 'Commenting as' }} <span class="font-bold text-slate-700">{{ user.display_name || user.username }}</span>
             </div>
             <div>
               <textarea 
@@ -204,10 +217,16 @@ onMounted(async () => {
               </transition>
               <button 
                 @click="submitComment"
-                class="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
-                :style="{ backgroundColor: systemSettings.primary_color }"
+                :disabled="isSubmitting"
+                :class="[
+                  'flex items-center gap-2 px-6 py-3 text-white font-bold rounded-xl transition-all shadow-lg',
+                  isSubmitting ? 'bg-slate-400 cursor-not-allowed shadow-none' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200'
+                ]"
+                :style="!isSubmitting ? { backgroundColor: systemSettings.primary_color } : {}"
               >
-                <Send :size="18" /> {{ t('common.submitComment') }}
+                <Send v-if="!isSubmitting" :size="18" />
+                <div v-else class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                {{ isSubmitting ? t('common.submitting') || 'Submitting...' : t('common.submitComment') }}
               </button>
             </div>
           </div>

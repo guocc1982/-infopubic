@@ -43,6 +43,7 @@
     "keepSame": "保持不变",
     "enterAuthor": "输入新作者名称...",
     "deleteConfirm": "确定要删除这篇文章吗？",
+    "deleteCommentConfirm": "确定要删除这条评论吗？",
     "bulkDeleteConfirm": "确定要删除选中的 {count} 篇文章吗？",
     "noExportData": "没有可导出的数据",
     "linkCopied": "链接已复制到剪贴板",
@@ -64,6 +65,7 @@
     "yourName": "您的称呼",
     "yourThoughts": "写下您的想法...",
     "submitComment": "提交评论",
+    "submitting": "提交中...",
     "noComments": "目前还没有评论，快来抢沙发吧！",
     "backToList": "返回列表",
     "shareArticle": "分享文章",
@@ -96,7 +98,7 @@
     "zhCN": "简体中文",
     "enUS": "English",
     "admin": "管理员",
-    "showingResults": "显示 {total} 条结果中的第 1-{count} 条",
+    "showingResults": "显示 {total} 条结果中的第 {start}-{end} 条",
     "exportFilename": "文章导出",
     "autoSaved": "已自动保存",
     "uploadFailed": "图片上传失败",
@@ -111,7 +113,9 @@
     "dataAnalysis": "数据分析",
     "coffeeTime": "咖啡时光",
     "starrySky": "星空宇宙",
-    "ecology": "绿色生态"
+    "ecology": "绿色生态",
+    "commentAsAnonymous": "您正在以匿名身份评论",
+    "commentingAs": "当前评论身份："
   },
   "login": {
     "title": "登录您的账户",

@@ -28,9 +28,23 @@ const route = useRoute();
 const router = useRouter();
 const { t, locale } = useI18n();
 const { tenantId, setTenantId, searchQuery, currentArticleTitle } = useData();
-const { user, isAuthenticated, logout } = useAuth();
+const { user, isAuthenticated, isAdmin, logout } = useAuth();
 const { apiFetch } = useApi();
 const isSidebarCollapsed = ref(false);
+const pendingCommentsCount = ref(0);
+
+const fetchPendingCommentsCount = async () => {
+  if (!isAdmin.value) return;
+  try {
+    const res = await apiFetch('/api/admin/comments/pending-count');
+    if (res.ok) {
+      const data = await res.json();
+      pendingCommentsCount.value = data.count;
+    }
+  } catch (error) {
+    console.error('Failed to fetch pending comments count:', error);
+  }
+};
 
 const systemSettings = ref({
   site_name: 'Hub CMS',
@@ -67,10 +81,14 @@ const applyGlobalSettings = () => {
 
 onMounted(() => {
   fetchSystemSettings();
+  fetchPendingCommentsCount();
   window.addEventListener('settings-updated', (e: any) => {
     systemSettings.value = { ...systemSettings.value, ...e.detail };
     applyGlobalSettings();
   });
+  window.addEventListener('comments-updated', fetchPendingCommentsCount);
+  // Poll for pending comments count every 30 seconds
+  setInterval(fetchPendingCommentsCount, 30000);
 });
 
 const tenants = [
@@ -190,15 +208,19 @@ const navigateTo = (path: string) => {
         </router-link>
 
         <router-link 
+          v-if="isAdmin"
           to="/comments"
           :class="[
-            'w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group',
+            'w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group relative',
             currentView === 'comment-mgmt' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-500 hover:bg-slate-50'
           ]"
           :style="currentView === 'comment-mgmt' ? { color: systemSettings.primary_color, backgroundColor: `color-mix(in srgb, ${systemSettings.primary_color} 10%, white)` } : {}"
         >
           <MessageSquare :size="20" :class="currentView === 'comment-mgmt' ? '' : 'group-hover:text-indigo-500'" :style="currentView === 'comment-mgmt' ? { color: systemSettings.primary_color } : {}" />
-          <span v-if="!isSidebarCollapsed" class="font-medium">{{ t('nav.commentManagement') }}</span>
+          <span v-if="!isSidebarCollapsed" class="font-medium flex-1 text-left">{{ t('nav.commentManagement') }}</span>
+          <span v-if="pendingCommentsCount > 0" class="absolute right-3 top-1/2 -translate-y-1/2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+            {{ pendingCommentsCount > 99 ? '99+' : pendingCommentsCount }}
+          </span>
         </router-link>
 
         <a 

@@ -43,6 +43,7 @@
     "keepSame": "Keep Same",
     "enterAuthor": "Enter new author name...",
     "deleteConfirm": "Are you sure you want to delete this article?",
+    "deleteCommentConfirm": "Are you sure you want to delete this comment?",
     "bulkDeleteConfirm": "Are you sure you want to delete the selected {count} articles?",
     "noExportData": "No data to export",
     "linkCopied": "Link copied to clipboard",
@@ -64,6 +65,7 @@
     "yourName": "Your Name",
     "yourThoughts": "Write down your thoughts...",
     "submitComment": "Submit Comment",
+    "submitting": "Submitting...",
     "noComments": "No comments yet. Be the first to comment!",
     "backToList": "Back to List",
     "shareArticle": "Share Article",
@@ -96,7 +98,7 @@
     "zhCN": "简体中文",
     "enUS": "English",
     "admin": "Admin",
-    "showingResults": "Showing 1-{count} of {total} results",
+    "showingResults": "Showing {start}-{end} of {total} results",
     "exportFilename": "Articles_Export",
     "autoSaved": "Auto-saved",
     "uploadFailed": "Image upload failed",
@@ -111,7 +113,9 @@
     "dataAnalysis": "Data Analysis",
     "coffeeTime": "Coffee Time",
     "starrySky": "Starry Sky",
-    "ecology": "Ecology"
+    "ecology": "Ecology",
+    "commentAsAnonymous": "You are commenting as Anonymous",
+    "commentingAs": "Commenting as"
   },
   "login": {
     "title": "Login to your account",

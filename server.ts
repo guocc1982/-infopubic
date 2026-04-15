@@ -871,7 +871,7 @@ app.delete("/api/articles/:id", authMiddleware, (req, res) => {
  */
 /**
  * @swagger
- * /api/comments:
+ * /api/admin/comments:
  *   get:
  *     summary: Get all comments (for management)
  *     tags: [Comments]
@@ -881,14 +881,24 @@ app.delete("/api/articles/:id", authMiddleware, (req, res) => {
  *       200:
  *         description: List of all comments
  */
-app.get("/api/comments", authMiddleware, (req, res) => {
+app.get("/api/admin/comments", authMiddleware, (req, res) => {
   const tenantId = (req as any).tenantId;
-  if ((req as any).user.role !== 'admin' && (req as any).user.role !== 'editor') {
-    return res.status(403).json({ error: "Only admins and editors can manage comments" });
+  if ((req as any).user.role !== 'admin') {
+    return res.status(403).json({ error: "Only admins can manage comments" });
   }
 
   const comments = db.prepare("SELECT * FROM comments WHERE tenant_id = ? ORDER BY created_at DESC").all(tenantId);
   res.json(comments);
+});
+
+app.get("/api/admin/comments/pending-count", authMiddleware, (req, res) => {
+  const tenantId = (req as any).tenantId;
+  if ((req as any).user.role !== 'admin') {
+    return res.status(403).json({ error: "Only admins can view pending count" });
+  }
+
+  const result = db.prepare("SELECT COUNT(*) as count FROM comments WHERE tenant_id = ? AND is_approved = 0").get(tenantId) as any;
+  res.json({ count: result.count });
 });
 
 app.get("/api/articles/:id/comments", (req, res) => {
@@ -946,7 +956,7 @@ app.post("/api/articles/:id/comments", (req, res) => {
 
 /**
  * @swagger
- * /api/comments/{id}:
+ * /api/admin/comments/{id}:
  *   patch:
  *     summary: Update comment status (approve/reject)
  *     tags: [Comments]
@@ -971,13 +981,13 @@ app.post("/api/articles/:id/comments", (req, res) => {
  *       200:
  *         description: Comment updated
  */
-app.patch("/api/comments/:id", authMiddleware, (req, res) => {
+app.patch("/api/admin/comments/:id", authMiddleware, (req, res) => {
   const { id } = req.params;
   const { is_approved } = req.body;
   const tenantId = (req as any).tenantId;
 
-  if ((req as any).user.role !== 'admin' && (req as any).user.role !== 'editor') {
-    return res.status(403).json({ error: "Only admins and editors can approve comments" });
+  if ((req as any).user.role !== 'admin') {
+    return res.status(403).json({ error: "Only admins can approve comments" });
   }
 
   try {
@@ -989,12 +999,12 @@ app.patch("/api/comments/:id", authMiddleware, (req, res) => {
   }
 });
 
-app.delete("/api/comments/:id", authMiddleware, (req, res) => {
+app.delete("/api/admin/comments/:id", authMiddleware, (req, res) => {
   const { id } = req.params;
   const tenantId = (req as any).tenantId;
 
-  if ((req as any).user.role !== 'admin' && (req as any).user.role !== 'editor') {
-    return res.status(403).json({ error: "Only admins and editors can delete comments" });
+  if ((req as any).user.role !== 'admin') {
+    return res.status(403).json({ error: "Only admins can delete comments" });
   }
 
   try {
